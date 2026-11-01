@@ -1,0 +1,32 @@
+{
+  "name": "tw527e.zip",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "description": "誠誠 - ChengCheng 的個人主頁",
+  "author": "TW527E <github@tw527e.zip>",
+  "license": "MIT",
+  "packageManager": "pnpm@12.16.1",
+  "engines": {
+    "node": ">=22.23.4"
+  },
+  "scripts": {
+    "dev": "astro dev",
+    "dev:lan": "astro dev --host",
+    "build": "astro build",
+    "preview": "astro preview",
+    "check": "astro check && tsc -p functions",
+    "dev:api": "wrangler pages dev dist --d1 DB --compatibility-date 2026-10-01 --port 8788"
+  },
+  "dependencies": {
+    "astro": "^7.4.4",
+    "lucide-static": "^1.66.0",
+    "simple-icons": "^16.36.0"
+  },
+  "devDependencies": {
+    "@astrojs/check": "^0.9.12",
+    "@cloudflare/workers-types": "^5.20261031.1",
+    "typescript": "^6.0.3",
+    "wrangler": "^4.156.0"
+  }
+}

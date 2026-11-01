@@ -1,0 +1,328 @@
+---
+import { Image } from "astro:assets";
+import avatar from "../assets/avatar.avif";
+import { site } from "../config/site";
+import { contacts, socialLinks } from "../config/links";
+import BrandIcon from "./BrandIcon.astro";
+import CopyButton from "./CopyButton.astro";
+---
+
+<section class="profile glass glass--clear rise" data-refract aria-labelledby="profile-name">
+  <Image class="avatar" data-cursor src={avatar} alt={`${site.name}的頭像`} width={224} height={224} loading="eager" fetchpriority="high" />
+
+  <h1 id="profile-name" class="name">
+    <span class="name__zh">{site.name}</span>
+    <span class="name__latin" lang="en">{site.nameLatin}</span>
+  </h1>
+
+  <p class="intro">{site.intro}</p>
+
+  <ul class="tags" aria-label="關於我">
+    {site.tags.map((tag) => <li class="tile" data-cursor>{tag}</li>)}
+  </ul>
+
+  <ul class="social" aria-label="在其他地方找到我">
+    {
+      socialLinks.map((link) => (
+        <li>
+          <a class="tile" href={link.url} target="_blank" rel="noopener noreferrer" aria-label={link.name} title={link.name}>
+            <BrandIcon path={link.icon} />
+          </a>
+        </li>
+      ))
+    }
+  </ul>
+
+  <!-- 沒有 JS 時四個聯絡方式直接列出來；有 JS 才變成切換卡 -->
+  <div class="contact tile" id="contact" role="group" aria-label="找我聊天">
+    <div class="contact__tabs">
+      {
+        contacts.map((c, i) => (
+          <button type="button" class="contact__tab" data-index={i} aria-pressed={i === 0 ? "true" : "false"} aria-controls={`contact-${i}`}>
+            <svg viewBox="0 0 24 24" fill="currentColor" fill-rule={c.evenOdd ? "evenodd" : undefined} aria-hidden="true" focusable="false">
+              <path d={c.icon} />
+            </svg>
+            <span>{c.name}</span>
+          </button>
+        ))
+      }
+    </div>
+    {
+      contacts.map((c, i) => (
+        <div class="contact__row" id={`contact-${i}`} data-index={i}>
+          <span class="contact__text">
+            <span class="contact__label">{c.copyLabel}</span>
+            {c.url ? (
+              <a class="contact__value" href={c.url} {...(c.url.startsWith("http") ? { target: "_blank", rel: "noopener noreferrer" } : {})}>
+                {c.value}
+              </a>
+            ) : (
+              <span class="contact__value">{c.value}</span>
+            )}
+          </span>
+          <CopyButton text={c.value} label={c.copyLabel} />
+        </div>
+      ))
+    }
+  </div>
+</section>
+
+<style>
+  .profile {
+    flex: 1 1 360px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    padding: 36px 28px 28px;
+    border-radius: 32px;
+    text-align: center;
+    --delay: 60ms;
+  }
+
+  .avatar {
+    width: 112px;
+    height: 112px;
+    border-radius: 50%;
+    box-shadow:
+      0 0 0 4px var(--ring),
+      0 10px 28px rgb(0 0 0 / 0.18);
+    transition: transform 0.6s var(--spring);
+  }
+
+  .avatar:hover {
+    transform: rotate(-6deg) scale(1.04);
+  }
+
+  .name {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    margin: 20px 0 0;
+    line-height: 1.15;
+  }
+
+  .name__zh {
+    font-size: 34px;
+    font-weight: 900;
+    letter-spacing: 0.08em;
+  }
+
+  .name__latin {
+    margin-top: 4px;
+    color: var(--accent);
+    font-family: var(--font-script);
+    font-size: 24px;
+    font-weight: 400;
+  }
+
+  .intro {
+    max-width: 28ch;
+    margin: 16px 0 0;
+    color: var(--text-2);
+    font-size: 15px;
+  }
+
+  .tags {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: center;
+    gap: 6px;
+    margin-top: 16px;
+  }
+
+  .tags li {
+    padding: 2px 12px;
+    border-radius: 999px;
+    font-size: 13px;
+  }
+
+  /* 一排放得下就是 44px，放不下就一起縮小，不要多出一個掉到第二排 */
+  .social {
+    display: flex;
+    justify-content: center;
+    gap: 6px;
+    width: 100%;
+    margin-top: 22px;
+  }
+
+  .social li {
+    flex: 0 1 44px;
+    min-width: 0;
+  }
+
+  .social a {
+    display: grid;
+    place-items: center;
+    width: 100%;
+    aspect-ratio: 1;
+    border-radius: 999px;
+  }
+
+  .social :global(svg) {
+    width: min(20px, 50%);
+    height: auto;
+  }
+
+  /* ---- 聯絡切換卡 ---- */
+  .contact {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    width: 100%;
+    margin-top: 14px;
+    padding: 6px;
+    border-radius: 22px;
+  }
+
+  /* 依文字長度分配寬度，每個分頁左右留白一樣 */
+  .contact__tabs {
+    display: none;
+    gap: 4px;
+  }
+
+  .contact__tab {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex: 1 1 auto;
+    gap: 5px;
+    min-width: 0;
+    min-height: 36px;
+    padding: 0 10px;
+    white-space: nowrap;
+    border: 0;
+    border-radius: 999px;
+    background: transparent;
+    color: var(--text-2);
+    font-size: 12px;
+    font-weight: 700;
+    transition:
+      background-color 0.25s var(--ease),
+      color 0.25s var(--ease);
+  }
+
+  .contact__tab svg {
+    flex: none;
+    width: 15px;
+    height: 15px;
+  }
+
+  .contact__tab:hover {
+    background: var(--inner-hover);
+  }
+
+  .contact__tab[aria-pressed="true"] {
+    background: var(--accent);
+    color: var(--on-accent);
+  }
+
+  /* 跟 Minecraft 卡的「伺服器位址」同一種寫法：小標籤在上、帳號在下 */
+  .contact__row {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 2px 0 0 12px;
+  }
+
+  .contact__text {
+    display: flex;
+    flex: 1;
+    flex-direction: column;
+    align-items: flex-start;
+    min-width: 0;
+    line-height: 1.3;
+    text-align: left;
+  }
+
+  .contact__label {
+    color: var(--text-2);
+    font-size: 12px;
+  }
+
+  .contact__value {
+    max-width: 100%;
+    overflow: hidden;
+    font-size: 15px;
+    font-variant-numeric: tabular-nums;
+    font-weight: 700;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  a.contact__value:hover {
+    text-decoration: underline;
+    text-underline-offset: 3px;
+  }
+
+  /* JS 接手後：只顯示選到的那一個 */
+  .contact.is-ready .contact__tabs {
+    display: flex;
+  }
+
+  .contact.is-ready .contact__row:not(.is-current) {
+    display: none;
+  }
+
+  @media (max-width: 959px) {
+    .profile {
+      padding: 30px 20px 22px;
+      border-radius: 30px;
+    }
+
+    .avatar {
+      width: 100px;
+      height: 100px;
+    }
+
+    .name {
+      margin-top: 18px;
+    }
+
+    .name__zh {
+      font-size: 30px;
+    }
+
+    .name__latin {
+      font-size: 22px;
+    }
+
+    .intro {
+      max-width: none;
+      margin-top: 14px;
+    }
+
+    .tags {
+      margin-top: 14px;
+    }
+
+    .contact__tab {
+      gap: 4px;
+      padding: 0 6px;
+    }
+  }
+
+  /* 很窄的手機：分頁只留文字，才放得下 */
+  @media (max-width: 369px) {
+    .contact__tab svg {
+      display: none;
+    }
+  }
+</style>
+
+<script>
+  function initContact() {
+    const root = document.getElementById("contact");
+    if (!root) return;
+    const tabs = [...root.querySelectorAll<HTMLButtonElement>(".contact__tab")];
+    const rows = [...root.querySelectorAll<HTMLElement>(".contact__row")];
+    const select = (index: number) => {
+      tabs.forEach((tab, i) => tab.setAttribute("aria-pressed", String(i === index)));
+      rows.forEach((row, i) => row.classList.toggle("is-current", i === index));
+    };
+    tabs.forEach((tab, i) => tab.addEventListener("click", () => select(i)));
+    select(0);
+    root.classList.add("is-ready");
+  }
+
+  initContact();
+</script>

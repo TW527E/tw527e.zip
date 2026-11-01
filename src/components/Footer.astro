@@ -1,0 +1,53 @@
+---
+import { site } from "../config/site";
+
+const startYear = Number(site.since.slice(0, 4));
+const year = new Date().getFullYear();
+const years = year > startYear ? `${startYear}–${year}` : `${startYear}`;
+---
+
+<footer class="footer">
+  <p class="footer__pill glass glass--clear">
+    <span data-cursor>© {years} {site.name}<span class="latin" lang="en"> {site.nameLatin}</span></span>
+    <span aria-hidden="true">·</span>
+    <a href={site.repo} target="_blank" rel="noopener noreferrer">原始碼</a>
+    <span aria-hidden="true">·</span>
+    <span data-cursor>v{__APP_VERSION__}</span>
+  </p>
+</footer>
+
+<style>
+  .footer {
+    display: flex;
+    justify-content: center;
+    margin-top: auto;
+  }
+
+  .footer__pill {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: center;
+    gap: 8px;
+    margin: 0;
+    padding: 8px 18px;
+    border-radius: 999px;
+    font-size: 13px;
+  }
+
+  .footer__pill a {
+    text-decoration: underline;
+    text-underline-offset: 3px;
+  }
+
+  @media (max-width: 959px) {
+    .footer__pill {
+      gap: 6px;
+      padding: 8px 16px;
+      font-size: 12px;
+    }
+
+    .latin {
+      display: none;
+    }
+  }
+</style>

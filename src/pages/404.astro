@@ -1,0 +1,77 @@
+---
+import Base from "../layouts/Base.astro";
+import Background from "../components/Background.astro";
+import Icon from "../components/Icon.astro";
+---
+
+<Base title="找不到這一頁 · 誠誠 ChengCheng" description="這個網址沒有東西，回首頁看看吧。" noindex>
+  <Background />
+  <main class="notfound">
+    <section class="card glass rise" aria-labelledby="nf-title">
+      <p class="code" lang="en">404</p>
+      <h1 id="nf-title">這一頁不在這裡</h1>
+      <p class="text">可能是網址打錯了，或是這頁已經被我搬走了。</p>
+      <a class="home" href="/"><Icon name="House" />回首頁</a>
+    </section>
+  </main>
+</Base>
+
+<style>
+  .notfound {
+    display: grid;
+    place-items: center;
+    min-height: 100dvh;
+    padding: 24px 16px;
+  }
+
+  .card {
+    width: min(420px, 100%);
+    padding: 36px 28px 28px;
+    border-radius: 32px;
+    text-align: center;
+  }
+
+  .code {
+    margin: 0;
+    color: var(--accent);
+    font-family: var(--font-script);
+    font-size: 56px;
+    line-height: 1.2;
+  }
+
+  h1 {
+    margin: 8px 0 0;
+    font-size: 24px;
+    font-weight: 900;
+  }
+
+  .text {
+    margin: 10px 0 0;
+    color: var(--text-2);
+    font-size: 15px;
+  }
+
+  .home {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    min-height: 46px;
+    margin-top: 22px;
+    padding: 0 24px;
+    border-radius: 999px;
+    background: var(--accent);
+    color: var(--on-accent);
+    font-weight: 700;
+    transition: transform 0.45s var(--spring);
+  }
+
+  .home:hover {
+    transform: translateY(-2px);
+  }
+
+  .home :global(svg) {
+    width: 18px;
+    height: 18px;
+  }
+</style>

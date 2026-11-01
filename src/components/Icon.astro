@@ -1,0 +1,16 @@
+---
+// 把 lucide-static 的 SVG 字串轉成裝飾用圖示（建置時處理，不送 JS）
+import * as icons from "lucide-static";
+
+interface Props {
+  name: keyof typeof icons;
+  class?: string;
+}
+
+const { name, class: className } = Astro.props;
+const svg = String(icons[name])
+  .replace("<svg", `<svg aria-hidden="true" focusable="false"`)
+  .replace(/class="([^"]*)"/, (_, c) => `class="${c}${className ? ` ${className}` : ""}"`);
+---
+
+<Fragment set:html={svg} />

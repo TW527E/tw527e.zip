@@ -1,0 +1,775 @@
+@font-face {
+  font-family: "Pacifico";
+  src: url("/fonts/pacifico-subset.woff2") format("woff2");
+  font-display: swap;
+}
+
+/* 滑鼠光源位置（JS 會更新；沒動滑鼠時由動畫帶著飄） */
+@property --mx {
+  syntax: "<length>";
+  inherits: true;
+  initial-value: 30vw;
+}
+
+@property --my {
+  syntax: "<length>";
+  inherits: true;
+  initial-value: 12vh;
+}
+
+:root {
+  color-scheme: light;
+  --text: #14161c;
+  --text-2: rgb(20 22 28 / 0.72);
+  --accent: #9c3f14;
+  --on-accent: #fff;
+  --danger: #c0304a;
+  --danmaku-bg: rgb(255 255 255 / 0.82);
+  --danmaku-text: #14161c;
+  --accent-soft: rgb(156 63 20 / 0.12);
+  --focus: #9c3f14;
+  --page: #dfe7f2;
+  --scrim: rgb(255 255 255 / 0.06);
+  --glass: rgb(255 255 255 / 0.38);
+  --glass-clear: rgb(255 255 255 / 0.24);
+  --glass-solid: #f5f6f9;
+  --inner: rgb(255 255 255 / 0.4);
+  --inner-hover: rgb(255 255 255 / 0.58);
+  --edge: rgb(255 255 255 / 0.85);
+  --edge-dim: rgb(255 255 255 / 0.4);
+  --rim: rgb(255 255 255 / 1);
+  --sheen: rgb(255 255 255 / 0.32);
+  --track: rgb(20 22 28 / 0.12);
+  --ring: rgb(255 255 255 / 0.75);
+  --shadow: 0 14px 44px rgb(20 40 80 / 0.16);
+  --font-sans: "Noto Sans TC", "PingFang TC", "Microsoft JhengHei", system-ui, -apple-system, "Segoe UI", sans-serif;
+  --font-script: "Pacifico", var(--font-sans);
+  --spring: cubic-bezier(0.34, 1.56, 0.64, 1);
+  --ease: cubic-bezier(0.2, 0.8, 0.2, 1);
+  --mx: 30vw;
+  --my: 12vh;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    color-scheme: dark;
+    --text: #f5f2ee;
+    --text-2: rgb(245 242 238 / 0.76);
+    --accent: #ffb27d;
+    --on-accent: #2a1408;
+    --danger: #ff8a9a;
+  --danmaku-bg: rgb(20 22 30 / 0.8);
+  --danmaku-text: #f5f2ee;
+    --danmaku-bg: rgb(20 22 30 / 0.8);
+    --danmaku-text: #f5f2ee;
+    --accent-soft: rgb(255 178 125 / 0.16);
+    --focus: #ffb27d;
+    --page: #11131b;
+    --scrim: rgb(5 6 12 / 0.3);
+    --glass: rgb(18 18 26 / 0.4);
+    --glass-clear: rgb(18 18 26 / 0.28);
+    --glass-solid: #1b1c24;
+    --inner: rgb(255 255 255 / 0.07);
+    --inner-hover: rgb(255 255 255 / 0.12);
+    --edge: rgb(255 255 255 / 0.3);
+    --edge-dim: rgb(255 255 255 / 0.08);
+    --rim: rgb(255 255 255 / 0.65);
+    --sheen: rgb(255 255 255 / 0.1);
+    --track: rgb(255 255 255 / 0.16);
+    --ring: rgb(255 255 255 / 0.22);
+    --shadow: 0 14px 44px rgb(0 0 0 / 0.4);
+  }
+}
+
+:root[data-theme="dark"] {
+  color-scheme: dark;
+  --text: #f5f2ee;
+  --text-2: rgb(245 242 238 / 0.76);
+  --accent: #ffb27d;
+  --on-accent: #2a1408;
+  --danger: #ff8a9a;
+  --accent-soft: rgb(255 178 125 / 0.16);
+  --focus: #ffb27d;
+  --page: #11131b;
+  --scrim: rgb(5 6 12 / 0.3);
+  --glass: rgb(18 18 26 / 0.4);
+  --glass-clear: rgb(18 18 26 / 0.28);
+  --glass-solid: #1b1c24;
+  --inner: rgb(255 255 255 / 0.07);
+  --inner-hover: rgb(255 255 255 / 0.12);
+  --edge: rgb(255 255 255 / 0.3);
+  --edge-dim: rgb(255 255 255 / 0.08);
+  --rim: rgb(255 255 255 / 0.65);
+  --sheen: rgb(255 255 255 / 0.1);
+  --track: rgb(255 255 255 / 0.16);
+  --ring: rgb(255 255 255 / 0.22);
+  --shadow: 0 14px 44px rgb(0 0 0 / 0.4);
+}
+
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+html {
+  -webkit-text-size-adjust: 100%;
+  text-size-adjust: 100%;
+}
+
+html.light-idle {
+  animation: light-drift 18s ease-in-out infinite alternate;
+}
+
+@keyframes light-drift {
+  0% {
+    --mx: 18vw;
+    --my: 6vh;
+  }
+  35% {
+    --mx: 72vw;
+    --my: 22vh;
+  }
+  70% {
+    --mx: 48vw;
+    --my: 64vh;
+  }
+  100% {
+    --mx: 12vw;
+    --my: 80vh;
+  }
+}
+
+body {
+  margin: 0;
+  min-height: 100dvh;
+  background: var(--page);
+  color: var(--text);
+  font-family: var(--font-sans);
+  font-size: 16px;
+  line-height: 1.6;
+  -webkit-font-smoothing: antialiased;
+}
+
+a {
+  color: inherit;
+  text-decoration: none;
+}
+
+button {
+  font: inherit;
+  color: inherit;
+  cursor: pointer;
+}
+
+img,
+svg {
+  display: block;
+}
+
+ul {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+:focus-visible {
+  outline: 2px solid var(--focus);
+  outline-offset: 3px;
+}
+
+.visually-hidden {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  white-space: nowrap;
+  border: 0;
+}
+
+.skip-link {
+  position: fixed;
+  top: 12px;
+  left: 12px;
+  z-index: 100;
+  padding: 8px 14px;
+  border-radius: 999px;
+  background: var(--glass-solid);
+  color: var(--text);
+  transform: translateY(-200%);
+}
+
+.skip-link:focus {
+  transform: none;
+}
+
+/* ---------- Liquid glass ---------- */
+
+.glass {
+  --blur: 14px;
+  position: relative;
+  isolation: isolate;
+  background-color: var(--glass);
+  -webkit-backdrop-filter: blur(var(--blur)) saturate(180%);
+  backdrop-filter: blur(var(--blur)) saturate(180%);
+  box-shadow:
+    var(--shadow),
+    inset 0 1px 0 var(--edge),
+    inset 0 -1px 0 var(--edge-dim);
+}
+
+/* 清透玻璃：模糊很輕，讓背景和折射看得見 */
+.glass--clear {
+  --blur: 4px;
+  background-color: var(--glass-clear);
+}
+
+/* 邊緣高光：跟著光源跑的亮邊 + 上亮下暗的描邊 */
+.glass::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+  border-radius: inherit;
+  padding: 1.5px;
+  pointer-events: none;
+  background:
+    radial-gradient(260px circle at var(--mx) var(--my), var(--rim), transparent 70%) fixed,
+    linear-gradient(160deg, var(--edge), var(--edge-dim) 38%, var(--edge-dim) 62%, var(--edge));
+  -webkit-mask:
+    linear-gradient(#000 0 0) content-box,
+    linear-gradient(#000 0 0);
+  -webkit-mask-composite: xor;
+  mask:
+    linear-gradient(#000 0 0) content-box exclude,
+    linear-gradient(#000 0 0);
+}
+
+/* 表面反光 */
+.glass::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  border-radius: inherit;
+  pointer-events: none;
+  background: radial-gradient(520px circle at var(--mx) var(--my), var(--sheen), transparent 65%) fixed;
+}
+
+/* 邊緣折射（scripts/liquid.ts 依卡片尺寸產生濾鏡，產生好才會加上 data-refract-ready） */
+
+/* Chromium：backdrop-filter 直接引用 SVG 濾鏡 */
+.liquid--backdrop .glass[data-refract-ready] {
+  -webkit-backdrop-filter: var(--refract) blur(var(--blur)) saturate(180%);
+  backdrop-filter: var(--refract) blur(var(--blur)) saturate(180%);
+}
+
+/* Safari、Firefox：卡片裡放一份對齊畫面的背景副本，折射和模糊都套在副本上 */
+.liquid--mirror .glass[data-refract-ready] {
+  -webkit-backdrop-filter: none;
+  backdrop-filter: none;
+}
+
+.refract-mirror {
+  display: none;
+  position: absolute;
+  inset: 0;
+  z-index: -2;
+  overflow: hidden;
+  border-radius: inherit;
+  pointer-events: none;
+  /* 卡片的底色會被副本蓋住，所以在副本上面再疊一次 */
+  background-color: inherit;
+}
+
+.refract-mirror::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background-color: inherit;
+}
+
+.glass[data-refract-ready] > .refract-mirror {
+  display: block;
+}
+
+/* 比卡片大一圈，模糊的邊緣會落在被裁掉的地方。折射在 SVG 裡做，這裡只負責模糊和飽和度 */
+.refract-mirror__box {
+  position: absolute;
+  top: -40px;
+  left: -40px;
+  overflow: hidden;
+  filter: blur(var(--blur)) saturate(180%);
+}
+
+.refract-mirror__page {
+  fill: var(--page);
+}
+
+.refract-mirror__img {
+  opacity: 0;
+  transition: opacity 0.8s var(--ease);
+  /* 百分比以圖片自己的大小、中心點算，跟 .bg__img 一樣 */
+  transform-box: fill-box;
+  transform-origin: center;
+  animation: bg-drift 50s ease-in-out infinite alternate;
+}
+
+/* 跟真正的背景一起淡入 */
+.refract-mirror__img.is-loaded {
+  opacity: 1;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .refract-mirror__img {
+    animation: none;
+  }
+}
+
+.refract-mirror__scrim {
+  fill: var(--scrim);
+}
+
+/* 背景慢慢漂移（components/Background.astro 和背景副本共用） */
+@keyframes bg-drift {
+  from {
+    transform: scale(1.02) translate3d(-1.2%, -0.6%, 0);
+  }
+  to {
+    transform: scale(1.09) translate3d(1.2%, 0.9%, 0);
+  }
+}
+
+/* 手機：統一用霧面玻璃（設計稿手機版的樣子） */
+@media (max-width: 959px) {
+  .glass--clear {
+    --blur: 12px;
+    background-color: var(--glass);
+  }
+}
+
+/* 卡片裡的小方塊 */
+.tile {
+  background: var(--inner);
+  box-shadow: inset 0 0 0 1px var(--edge-dim);
+  transition:
+    transform 0.5s var(--spring),
+    background-color 0.25s var(--ease);
+}
+
+a.tile:hover,
+button.tile:hover {
+  background: var(--inner-hover);
+  transform: translateY(-3px);
+}
+
+a.tile:active,
+button.tile:active {
+  transform: scale(0.97);
+  transition-duration: 0.12s;
+}
+
+.copy-btn {
+  display: grid;
+  flex: none;
+  place-items: center;
+  width: 40px;
+  height: 40px;
+  padding: 0;
+  border: 0;
+  border-radius: 999px;
+  background: var(--accent);
+  color: var(--on-accent);
+  transition: transform 0.45s var(--spring);
+}
+
+.copy-btn:hover {
+  transform: scale(1.06);
+}
+
+.copy-btn:active {
+  transform: scale(0.88);
+  transition-duration: 0.1s;
+}
+
+.copy-btn svg {
+  width: 17px;
+  height: 17px;
+}
+
+.copy-btn .icon-done,
+.copy-btn.is-done .icon-idle {
+  display: none;
+}
+
+.copy-btn.is-done .icon-done {
+  display: block;
+}
+
+.panel {
+  padding: 24px;
+  border-radius: 28px;
+}
+
+.panel-title {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 0 0 16px;
+  font-size: 17px;
+  font-weight: 700;
+  line-height: 1.25;
+}
+
+.panel-title svg {
+  width: 18px;
+  height: 18px;
+  flex: none;
+}
+
+.pill {
+  padding: 1px 10px;
+  border-radius: 999px;
+  box-shadow: inset 0 0 0 1px var(--track);
+  color: var(--text-2);
+  font-size: 12px;
+}
+
+/* 進場：各區塊依序浮上來 */
+.rise {
+  animation: rise 0.8s var(--ease) backwards;
+  animation-delay: var(--delay, 0ms);
+}
+
+@keyframes rise {
+  from {
+    opacity: 0;
+    transform: translateY(18px) scale(0.985);
+  }
+}
+
+@media (max-width: 959px) {
+  .panel {
+    padding: 20px;
+    border-radius: 26px;
+  }
+
+  .panel-title {
+    margin-bottom: 14px;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  html.light-idle {
+    animation: none;
+  }
+
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}
+
+/* 使用者希望減少透明度 → 改成實心卡片 */
+@media (prefers-reduced-transparency: reduce) {
+  .glass,
+  .glass--clear,
+  .liquid .glass[data-refract-ready] {
+    background-color: var(--glass-solid);
+    -webkit-backdrop-filter: none;
+    backdrop-filter: none;
+  }
+
+  .glass::after,
+  .refract-mirror {
+    display: none !important;
+  }
+}
+
+@media (prefers-contrast: more) {
+  .glass {
+    background-color: var(--glass-solid);
+  }
+}
+
+/* ---------- 仿 iPadOS 的游標（scripts/cursor.ts） ---------- */
+
+:root {
+  --pointer: rgb(255 255 255 / 0.1);
+  --pointer-snap: rgb(20 22 28 / 0.12);
+  --pointer-wide: rgb(20 22 28 / 0.05);
+  --pointer-beam: rgb(20 22 28 / 0.5);
+  --pointer-edge: rgb(255 255 255 / 0.12);
+  --pointer-snap-edge: rgb(255 255 255 / 0.55);
+}
+
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --pointer-snap: rgb(255 255 255 / 0.18);
+    --pointer-wide: rgb(255 255 255 / 0.07);
+    --pointer-beam: rgb(255 255 255 / 0.6);
+    --pointer-snap-edge: rgb(255 255 255 / 0.35);
+  }
+}
+
+:root[data-theme="dark"] {
+  --pointer-snap: rgb(255 255 255 / 0.18);
+  --pointer-wide: rgb(255 255 255 / 0.07);
+  --pointer-beam: rgb(255 255 255 / 0.6);
+  --pointer-snap-edge: rgb(255 255 255 / 0.35);
+}
+
+/* 尺寸、圓角、位置都由 JS 每一幀更新，這裡只管外觀 */
+.cursor-ring {
+  position: fixed;
+  top: 0;
+  left: 0;
+  z-index: 50;
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  /* 不畫描邊，只留幾乎看不到的內緣 */
+  background: var(--pointer);
+  box-shadow:
+    inset 0 0 0 1px var(--pointer-edge),
+    0 2px 10px rgb(0 0 0 / 0.08);
+  -webkit-backdrop-filter: blur(3px) saturate(160%) brightness(1.05);
+  backdrop-filter: blur(3px) saturate(160%) brightness(1.05);
+  opacity: 0;
+  pointer-events: none;
+  transition:
+    opacity 0.25s var(--ease),
+    background-color 0.25s var(--ease),
+    box-shadow 0.25s var(--ease);
+}
+
+.cursor-ring.is-visible {
+  opacity: 1;
+}
+
+/* 吸附在按鈕上：變成按鈕形狀、浮在上面的一層高光；不模糊，免得按鈕上的字糊掉 */
+.cursor-ring.is-snapped {
+  background: var(--pointer-snap);
+  box-shadow:
+    inset 0 1px 0 var(--pointer-snap-edge),
+    inset 0 0 0 1px var(--pointer-edge),
+    0 6px 18px rgb(0 0 0 / 0.14);
+  -webkit-backdrop-filter: none;
+  backdrop-filter: none;
+}
+
+/* 在文字上：變成一條跟那一行一樣高的直線 */
+.cursor-ring.is-text {
+  background: var(--pointer-beam);
+  box-shadow: none;
+  -webkit-backdrop-filter: none;
+  backdrop-filter: none;
+}
+
+/* 大卡片：整張卡片亮一層，淡一點，不要蓋過卡片上的字 */
+.cursor-ring.is-snapped.is-wide {
+  background: var(--pointer-wide);
+  box-shadow:
+    inset 0 1px 0 var(--pointer-snap-edge),
+    inset 0 0 0 1px var(--pointer-edge);
+}
+
+.refract-defs {
+  position: absolute;
+  width: 0;
+  height: 0;
+  overflow: hidden;
+}
+
+/* ---------- 彩蛋：連點頭像三下（scripts/avatar-egg.ts） ---------- */
+
+.avatar {
+  cursor: pointer;
+  -webkit-user-select: none;
+  user-select: none;
+}
+
+.avatar.is-party {
+  animation: avatar-party 0.9s var(--spring);
+}
+
+@keyframes avatar-party {
+  0% {
+    transform: rotate(0) scale(1);
+  }
+  35% {
+    transform: rotate(200deg) scale(1.18);
+  }
+  100% {
+    transform: rotate(360deg) scale(1);
+  }
+}
+
+.egg-burst {
+  position: fixed;
+  z-index: 60;
+  width: 0;
+  height: 0;
+  pointer-events: none;
+}
+
+.egg-bit {
+  position: absolute;
+  top: -5px;
+  left: -5px;
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  background: var(--bit);
+  animation: egg-bit 1s cubic-bezier(0.2, 0.7, 0.3, 1) forwards;
+}
+
+.egg-bit--0 {
+  --bit: var(--accent);
+}
+
+.egg-bit--1 {
+  --bit: #ff8fb1;
+}
+
+.egg-bit--2 {
+  --bit: #6ec3ff;
+}
+
+.egg-bit--3 {
+  --bit: #ffd25e;
+}
+
+.egg-bit--star {
+  top: -7px;
+  left: -7px;
+  width: 14px;
+  height: 14px;
+  border-radius: 0;
+  clip-path: polygon(50% 0, 62% 38%, 100% 50%, 62% 62%, 50% 100%, 38% 62%, 0 50%, 38% 38%);
+}
+
+@keyframes egg-bit {
+  0% {
+    transform: translate(0, 0) scale(0.4) rotate(0);
+    opacity: 1;
+  }
+  70% {
+    opacity: 1;
+  }
+  100% {
+    /* 最後往下掉一點，像被丟出去 */
+    transform: translate(var(--dx), calc(var(--dy) + 30px)) scale(1) rotate(var(--spin));
+    opacity: 0;
+  }
+}
+
+.egg-bubble {
+  position: fixed;
+  z-index: 61;
+  margin: 0;
+  padding: 8px 14px;
+  border-radius: 999px;
+  background: var(--glass-solid);
+  box-shadow:
+    inset 0 0 0 1px var(--track),
+    0 8px 24px rgb(0 0 0 / 0.18);
+  color: var(--text);
+  font-size: 14px;
+  font-weight: 700;
+  white-space: nowrap;
+  pointer-events: none;
+  transform: translate(-50%, -100%);
+  animation: egg-bubble-in 0.4s var(--spring);
+}
+
+/* 指向頭像的小尖角 */
+.egg-bubble::after {
+  content: "";
+  position: absolute;
+  top: 100%;
+  left: 50%;
+  width: 10px;
+  height: 6px;
+  background: inherit;
+  clip-path: polygon(0 0, 100% 0, 50% 100%);
+  transform: translateX(-50%);
+}
+
+.egg-bubble.is-leaving {
+  animation: egg-bubble-out 0.25s var(--ease) forwards;
+}
+
+@keyframes egg-bubble-in {
+  from {
+    transform: translate(-50%, -80%) scale(0.6);
+    opacity: 0;
+  }
+}
+
+@keyframes egg-bubble-out {
+  to {
+    transform: translate(-50%, -110%);
+    opacity: 0;
+  }
+}
+
+/* ---------- 彈幕（scripts/danmaku.ts）：浮在內容上面，但點不到，點擊都會穿過去 ---------- */
+
+.danmaku {
+  position: fixed;
+  inset: 0;
+  /* 在內容之上、游標光圈（50）之下 */
+  z-index: 40;
+  overflow: hidden;
+  pointer-events: none;
+}
+
+.danmaku__item {
+  position: absolute;
+  left: 0;
+  display: flex;
+  flex-direction: column;
+  padding: 6px 14px;
+  border-radius: 18px;
+  background: var(--danmaku-bg);
+  box-shadow: 0 4px 14px rgb(0 0 0 / 0.12);
+  color: var(--danmaku-text);
+  line-height: 1.35;
+  white-space: nowrap;
+  will-change: transform;
+}
+
+.danmaku__text {
+  font-size: 15px;
+  font-weight: 700;
+}
+
+/* 署名：像名言一樣放在右下角 */
+.danmaku__name {
+  align-self: flex-end;
+  margin-top: 1px;
+  font-size: 11px;
+  font-weight: 500;
+  opacity: 0.75;
+}
+
+/* 自己剛留的那則：用主色描一圈，比較好找 */
+.danmaku__item--own {
+  box-shadow:
+    0 0 0 2px var(--accent),
+    0 4px 14px rgb(0 0 0 / 0.12);
+}
+
+@media (max-width: 959px) {
+  .danmaku__text {
+    font-size: 14px;
+  }
+}

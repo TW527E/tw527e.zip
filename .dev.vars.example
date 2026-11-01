@@ -1,0 +1,4 @@
+# 本機測試留言功能用：複製成 .dev.vars（已被 .gitignore 排除）
+# 這是 Cloudflare 公開的 Turnstile 測試用 secret，永遠會驗證通過，只能在本機用。
+# 正式站的 secret 請設在 Cloudflare Pages 後台，不要寫進任何檔案。
+TURNSTILE_SECRET=1x0000000000000000000000000000000AA

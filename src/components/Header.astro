@@ -1,0 +1,118 @@
+---
+import { site } from "../config/site";
+import Icon from "./Icon.astro";
+---
+
+<header class="header">
+  <a class="logo glass glass--clear rise" href="/" aria-label={`${site.domain} 首頁`}>
+    <span class="logo__text" lang="en">{site.domain}</span>
+  </a>
+
+  <div class="toolbar glass glass--clear rise" role="toolbar" aria-label="頁面工具">
+    <button type="button" class="ibtn" id="bg-shuffle" aria-label="換一張背景" title="換一張背景">
+      <Icon name="Shuffle" />
+    </button>
+    <button type="button" class="ibtn" id="bg-view" aria-label="只看背景" title="只看背景（按 Esc 回來）" aria-pressed="false">
+      <Icon name="Image" />
+    </button>
+    <button type="button" class="ibtn ibtn--accent" id="theme-toggle" aria-label="主題：跟著系統（點一下切換）" title="切換主題">
+      <Icon name="SunMoon" class="theme-icon theme-icon--auto" />
+      <Icon name="Sun" class="theme-icon theme-icon--light" />
+      <Icon name="Moon" class="theme-icon theme-icon--dark" />
+    </button>
+  </div>
+</header>
+
+<style>
+  .header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 12px;
+    width: 100%;
+    max-width: 1120px;
+    margin: 0 auto;
+  }
+
+  .logo {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    height: 52px;
+    padding: 0 22px;
+    border-radius: 999px;
+    font-family: var(--font-script);
+    font-size: 22px;
+  }
+
+  /* Pacifico 的字身上下不對稱，裁掉多餘的上下空間才會真的置中 */
+  .logo__text {
+    line-height: 1;
+    text-box: trim-both cap alphabetic;
+  }
+
+  .toolbar {
+    display: flex;
+    gap: 2px;
+    padding: 4px;
+    border-radius: 999px;
+  }
+
+  .ibtn {
+    display: grid;
+    place-items: center;
+    width: 44px;
+    height: 44px;
+    padding: 0;
+    border: 0;
+    border-radius: 999px;
+    background: transparent;
+    transition:
+      transform 0.45s var(--spring),
+      background-color 0.2s var(--ease);
+  }
+
+  .ibtn :global(svg) {
+    width: 20px;
+    height: 20px;
+  }
+
+  .ibtn:hover,
+  .ibtn[aria-pressed="true"] {
+    background: var(--accent-soft);
+  }
+
+  .ibtn:active {
+    transform: scale(0.86);
+    transition-duration: 0.1s;
+  }
+
+  .ibtn--accent {
+    background: var(--accent-soft);
+    color: var(--accent);
+  }
+
+  /* 依目前的主題設定顯示對應圖示（圖示是注入的 SVG，要用 :global） */
+  .ibtn :global(.theme-icon--light),
+  .ibtn :global(.theme-icon--dark),
+  :global(html[data-theme]) .ibtn :global(.theme-icon--auto) {
+    display: none;
+  }
+
+  :global(html[data-theme="light"]) .ibtn :global(.theme-icon--light),
+  :global(html[data-theme="dark"]) .ibtn :global(.theme-icon--dark) {
+    display: block;
+  }
+
+  @media (max-width: 959px) {
+    .logo {
+      padding: 0 18px;
+      font-size: 19px;
+    }
+  }
+</style>
+
+<script>
+  import { initToolbar } from "../scripts/toolbar";
+  initToolbar();
+</script>

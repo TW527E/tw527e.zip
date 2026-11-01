@@ -1,0 +1,104 @@
+---
+import { navLinks } from "../config/links";
+import Icon from "./Icon.astro";
+---
+
+<section class="panel glass rise" data-refract aria-labelledby="nav-title">
+  <h2 id="nav-title" class="panel-title"><Icon name="Compass" />我的其他地方</h2>
+  <ul class="nav">
+    {
+      navLinks.map((link) => (
+        <li>
+          <a class="tile" href={link.url} target="_blank" rel="noopener noreferrer">
+            <span class="nav__icon">
+              <Icon name={link.icon} />
+            </span>
+            <span class="nav__text">
+              <strong>{link.name}</strong>
+              <span>{link.description}</span>
+            </span>
+            <Icon name="ArrowUpRight" class="nav__arrow" />
+          </a>
+        </li>
+      ))
+    }
+  </ul>
+</section>
+
+<style>
+  .panel {
+    --delay: 140ms;
+  }
+
+  .nav {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+    gap: 12px;
+  }
+
+  .nav a {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    height: 100%;
+    padding: 16px 18px;
+    border-radius: 20px;
+  }
+
+  .nav__icon {
+    display: grid;
+    flex: none;
+    place-items: center;
+    width: 48px;
+    height: 48px;
+    border-radius: 16px;
+    background: var(--accent-soft);
+    color: var(--accent);
+  }
+
+  .nav__icon :global(svg) {
+    width: 22px;
+    height: 22px;
+  }
+
+  .nav__text {
+    display: flex;
+    flex: 1;
+    flex-direction: column;
+    min-width: 0;
+    line-height: 1.4;
+  }
+
+  .nav__text strong {
+    font-size: 16px;
+  }
+
+  .nav__text span {
+    color: var(--text-2);
+    font-size: 14px;
+  }
+
+  .nav :global(.nav__arrow) {
+    flex: none;
+    width: 18px;
+    height: 18px;
+    opacity: 0.6;
+  }
+
+  @media (max-width: 959px) {
+    .nav {
+      grid-template-columns: 1fr;
+      gap: 10px;
+    }
+
+    .nav a {
+      padding: 14px 16px;
+    }
+
+    .nav__icon {
+      width: 44px;
+      height: 44px;
+      border-radius: 14px;
+    }
+  }
+</style>

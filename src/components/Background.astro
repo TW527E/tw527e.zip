@@ -1,0 +1,58 @@
+---
+// 背景圖層：只負責「好看」，載入成功與否都不會擋住內容
+---
+
+<div class="bg" aria-hidden="true">
+  <img class="bg__img" id="bg-img" alt="" decoding="async" />
+  <div class="bg__scrim"></div>
+</div>
+
+<style>
+  .bg {
+    position: fixed;
+    inset: 0;
+    z-index: -1;
+    overflow: hidden;
+    /* 圖片還沒來、或全部失敗時看到的底色 */
+    background: var(--page);
+  }
+
+  .bg__img {
+    position: absolute;
+    inset: -4%;
+    width: 108%;
+    height: 108%;
+    object-fit: cover;
+    opacity: 0;
+    transition: opacity 0.8s var(--ease);
+    /* 背景慢慢漂移，玻璃邊緣的折射才會跟著流動（keyframes 在 global.css） */
+    animation: bg-drift 50s ease-in-out infinite alternate;
+    will-change: transform;
+  }
+
+  .bg__img.is-loaded {
+    opacity: 1;
+  }
+
+  .bg__scrim {
+    position: absolute;
+    inset: 0;
+    background: var(--scrim);
+    transition: opacity 0.5s var(--ease);
+  }
+
+  :global(body.view-bg) .bg__scrim {
+    opacity: 0;
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .bg__img {
+      animation: none;
+    }
+  }
+</style>
+
+<script>
+  import { initBackground } from "../scripts/background";
+  initBackground();
+</script>

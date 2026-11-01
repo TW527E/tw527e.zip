@@ -1,0 +1,17 @@
+---
+import Icon from "./Icon.astro";
+
+interface Props {
+  text: string;
+  /** 例如「Discord 帳號」，會變成「複製 Discord 帳號」 */
+  label: string;
+  id?: string;
+}
+
+const { text, label, id } = Astro.props;
+---
+
+<button type="button" class="copy-btn" id={id} data-copy={text} data-copy-label={label} aria-label={`複製 ${label}`} title={`複製 ${label}`}>
+  <Icon name="Copy" class="icon-idle" />
+  <Icon name="Check" class="icon-done" />
+</button>

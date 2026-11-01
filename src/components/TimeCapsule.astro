@@ -1,0 +1,158 @@
+---
+import { site } from "../config/site";
+import Icon from "./Icon.astro";
+
+const items = [
+  { key: "day", label: "今天" },
+  { key: "week", label: "這週" },
+  { key: "month", label: "這個月" },
+  { key: "year", label: "今年" },
+];
+---
+
+<section class="panel glass rise" data-refract aria-labelledby="capsule-title">
+  <h2 id="capsule-title" class="panel-title"><Icon name="Hourglass" />時間膠囊</h2>
+  <div class="capsule" id="capsule" data-since={site.since}>
+    {
+      items.map((item) => (
+        <div class="capsule__item" data-key={item.key} data-cursor>
+          <div class="capsule__head">
+            <span class="capsule__label">{item.label}</span>
+            <span class="capsule__pct" data-pct>–</span>
+          </div>
+          <div class="capsule__track" role="progressbar" aria-label={`${item.label}過了多少`} aria-valuemin="0" aria-valuemax="100">
+            <div class="capsule__bar" data-bar />
+          </div>
+          <div class="capsule__left" data-left />
+        </div>
+      ))
+    }
+  </div>
+  <p class="since" id="since" hidden></p>
+</section>
+
+<style>
+  .panel {
+    --delay: 300ms;
+  }
+
+  .capsule {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 18px 28px;
+  }
+
+  /* 桌機：「今天 …… 63% · 還剩 8 小時」排同一行 */
+  .capsule__item {
+    display: grid;
+    grid-template-areas:
+      "label pct left"
+      "bar bar bar";
+    grid-template-columns: auto 1fr auto;
+    column-gap: 4px;
+  }
+
+  .capsule__head {
+    display: contents;
+  }
+
+  .capsule__label {
+    grid-area: label;
+    margin-bottom: 8px;
+    font-size: 14px;
+    font-weight: 700;
+  }
+
+  .capsule__pct,
+  .capsule__left {
+    color: var(--text-2);
+    font-size: 14px;
+    font-variant-numeric: tabular-nums;
+  }
+
+  .capsule__pct {
+    grid-area: pct;
+    justify-self: end;
+  }
+
+  .capsule__pct::after {
+    content: " ·";
+  }
+
+  .capsule__left {
+    grid-area: left;
+  }
+
+  .capsule__track {
+    grid-area: bar;
+    height: 10px;
+    overflow: hidden;
+    border-radius: 999px;
+    background: var(--track);
+  }
+
+  .capsule__bar {
+    width: 0;
+    height: 100%;
+    border-radius: 999px;
+    background: var(--accent);
+    transition: width 0.8s var(--ease);
+  }
+
+  .since {
+    margin: 18px 0 0;
+    color: var(--text-2);
+    font-size: 14px;
+  }
+
+  .since :global(strong) {
+    color: var(--text);
+    font-variant-numeric: tabular-nums;
+  }
+
+  /* 手機：百分比在右上、剩餘時間放在進度條下面 */
+  @media (max-width: 959px) {
+    .capsule {
+      gap: 16px 18px;
+    }
+
+    .capsule__item {
+      grid-template-areas:
+        "label pct"
+        "bar bar"
+        "left left";
+      grid-template-columns: auto 1fr;
+    }
+
+    .capsule__label {
+      margin-bottom: 6px;
+    }
+
+    .capsule__pct {
+      color: var(--text);
+    }
+
+    .capsule__pct::after {
+      content: none;
+    }
+
+    .capsule__left {
+      justify-self: start;
+      margin-top: 4px;
+      font-size: 12px;
+    }
+
+    .capsule__track {
+      height: 8px;
+    }
+
+    .since {
+      margin-top: 16px;
+    }
+  }
+</style>
+
+<script>
+  import { initTimeCapsule } from "../scripts/time-capsule";
+  initTimeCapsule();
+</script>

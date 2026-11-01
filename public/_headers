@@ -1,0 +1,25 @@
+# Cloudflare Pages 的回應標頭
+# CSP：所有 JS / CSS 都是同網域的外部檔案，所以不需要 'unsafe-inline'。
+# 留言板的人機驗證（Cloudflare Turnstile）要從 challenges.cloudflare.com 載入程式和 iframe。
+# 如果之後改用遠端隨機背景 API，記得把那個網域加進 img-src。
+/*
+  Content-Security-Policy: default-src 'self'; script-src 'self' https://challenges.cloudflare.com; style-src 'self'; img-src 'self'; font-src 'self'; connect-src 'self'; frame-src https://challenges.cloudflare.com; object-src 'none'; base-uri 'self'; form-action 'none'; frame-ancestors 'none'; upgrade-insecure-requests
+  X-Content-Type-Options: nosniff
+  Referrer-Policy: strict-origin-when-cross-origin
+  Permissions-Policy: camera=(), microphone=(), geolocation=(), payment=(), usb=(), interest-cohort=()
+  Cross-Origin-Opener-Policy: same-origin
+  X-Frame-Options: DENY
+
+# 檔名有雜湊的資源可以放心快取一年
+/_astro/*
+  Cache-Control: public, max-age=31536000, immutable
+
+/fonts/*
+  Cache-Control: public, max-age=31536000, immutable
+
+/bg/*
+  Cache-Control: public, max-age=604800
+
+# 給 AI 看的網站簡介是中文，明確標成 UTF-8 才不會變亂碼
+/llms.txt
+  Content-Type: text/plain; charset=utf-8

@@ -1,0 +1,181 @@
+---
+import Base from "../layouts/Base.astro";
+import Background from "../components/Background.astro";
+import Header from "../components/Header.astro";
+import Profile from "../components/Profile.astro";
+import NavLinks from "../components/NavLinks.astro";
+import Minecraft from "../components/Minecraft.astro";
+import Projects from "../components/Projects.astro";
+import TimeCapsule from "../components/TimeCapsule.astro";
+import Footer from "../components/Footer.astro";
+import Guestbook from "../components/Guestbook.astro";
+import { getImage } from "astro:assets";
+import avatar from "../assets/avatar.avif";
+import { site } from "../config/site";
+import { socialLinks } from "../config/links";
+
+// 告訴搜尋引擎和 AI：這是誠誠的個人主頁，這些帳號都是同一個人
+const avatarImage = await getImage({ src: avatar, width: 400, height: 400, format: "png" });
+const id = (name: string) => `${site.url}/#${name}`;
+const jsonLd = {
+  "@context": "https://schema.org",
+  "@graph": [
+    {
+      "@type": "WebSite",
+      "@id": id("website"),
+      url: `${site.url}/`,
+      name: site.title,
+      alternateName: [site.handle, site.domain],
+      inLanguage: "zh-Hant-TW",
+      publisher: { "@id": id("person") },
+    },
+    {
+      "@type": "ProfilePage",
+      "@id": id("profile"),
+      url: `${site.url}/`,
+      name: `${site.title} · ${site.handle}`,
+      description: site.description,
+      inLanguage: "zh-Hant-TW",
+      isPartOf: { "@id": id("website") },
+      mainEntity: { "@id": id("person") },
+      ...(site.since && { dateCreated: site.since }),
+    },
+    {
+      "@type": "Person",
+      "@id": id("person"),
+      name: site.name,
+      alternateName: [site.nameLatin, site.handle],
+      url: `${site.url}/`,
+      image: new URL(avatarImage.src, site.url).href,
+      email: `mailto:${site.email}`,
+      description: site.intro,
+      knowsAbout: site.tags,
+      sameAs: socialLinks.map((link) => link.url),
+    },
+  ],
+};
+---
+
+<Base jsonLd={jsonLd}>
+  <a class="skip-link" href="#main">跳到主要內容</a>
+  <Background />
+
+  <div class="page">
+    <Header />
+
+    <main id="main" class="layout">
+      <div class="layout__side">
+        <Profile />
+        <Guestbook />
+      </div>
+      <div class="layout__main">
+        <NavLinks />
+        <Minecraft />
+        <Projects />
+        <TimeCapsule />
+      </div>
+    </main>
+
+    <Footer />
+  </div>
+
+  <p class="visually-hidden" id="copy-status" role="status" aria-live="polite"></p>
+</Base>
+
+<style>
+  .page {
+    display: flex;
+    flex-direction: column;
+    gap: 24px;
+    min-height: 100dvh;
+    padding: 24px;
+  }
+
+  .layout {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: flex-start;
+    gap: 20px;
+    width: 100%;
+    max-width: 1120px;
+    margin: 0 auto;
+  }
+
+  /* 左欄：個人卡片 + 留言板 */
+  .layout__side {
+    display: flex;
+    flex: 1 1 360px;
+    flex-direction: column;
+    gap: 20px;
+    min-width: 0;
+  }
+
+  .layout__side :global(.profile) {
+    flex: none;
+  }
+
+  .layout__main {
+    display: flex;
+    flex: 999 1 560px;
+    flex-direction: column;
+    gap: 20px;
+    min-width: 0;
+  }
+
+  @media (max-width: 959px) {
+    .page {
+      gap: 16px;
+      padding: 16px max(16px, env(safe-area-inset-right)) max(16px, env(safe-area-inset-bottom)) max(16px, env(safe-area-inset-left));
+    }
+
+    .layout,
+    .layout__main {
+      gap: 16px;
+    }
+
+    .layout__main {
+      flex-basis: 100%;
+    }
+
+    /* 手機：留言板排到最後面，先看到主要內容 */
+    .layout__side {
+      display: contents;
+    }
+
+    .layout__side :global(.profile),
+    .layout__side :global(.guestbook) {
+      flex: 1 1 100%;
+      min-width: 0;
+    }
+
+    .layout__side :global(.guestbook) {
+      order: 1;
+    }
+  }
+
+  /* 只看背景：除了工具列以外都先收起來 */
+  .page :global(> *),
+  .page :global(.header > .logo) {
+    transition:
+      opacity 0.4s var(--ease),
+      transform 0.4s var(--ease),
+      visibility 0s;
+  }
+
+  :global(body.view-bg) .layout,
+  :global(body.view-bg) .page :global(> .footer),
+  :global(body.view-bg) .page :global(.header > .logo) {
+    opacity: 0;
+    pointer-events: none;
+    transform: translateY(12px);
+    visibility: hidden;
+    transition:
+      opacity 0.4s var(--ease),
+      transform 0.4s var(--ease),
+      visibility 0s 0.4s;
+  }
+</style>
+
+<script>
+  import "../scripts/main";
+</script>

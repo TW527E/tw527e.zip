@@ -1,0 +1,248 @@
+---
+import { guestbook } from "../config/guestbook";
+import { MAX_LENGTH, MAX_NAME_LENGTH } from "../../functions/_lib/filter";
+import Icon from "./Icon.astro";
+---
+
+{
+  guestbook.enabled && (
+    <section class="panel guestbook glass rise" data-refract aria-labelledby="guestbook-title">
+      <div class="guestbook__head">
+        <h2 id="guestbook-title" class="panel-title">
+          <Icon name="MessageCircle" />
+          留一句話
+        </h2>
+        <button type="button" class="guestbook__toggle" id="danmaku-toggle" aria-pressed="true" hidden>
+          <Icon name="MessagesSquare" />
+          <span>彈幕</span>
+        </button>
+      </div>
+      <p class="guestbook__hint">送出後會變成彈幕飄過整個畫面，最多 {MAX_LENGTH} 個字；署名會像名言一樣掛在右下角。</p>
+
+      {/* 沒有 JS 不能留言，所以先停用，JS 載入後才打開 */}
+      <form class="guestbook__form" id="guestbook-form" data-api={guestbook.api} data-sitekey={guestbook.turnstileSiteKey} novalidate>
+        <fieldset disabled>
+          <label class="visually-hidden" for="guestbook-text">想說的話</label>
+          <div class="guestbook__field tile">
+            <input
+              id="guestbook-text"
+              name="text"
+              type="text"
+              maxlength={MAX_LENGTH * 2}
+              placeholder="想說什麼？"
+              autocomplete="off"
+              enterkeyhint="send"
+              required
+            />
+            <span class="guestbook__count" id="guestbook-count" aria-hidden="true">0/{MAX_LENGTH}</span>
+          </div>
+          <label class="visually-hidden" for="guestbook-name">署名（可以不填）</label>
+          <div class="guestbook__field guestbook__field--name tile">
+            <span class="guestbook__dash" aria-hidden="true">——</span>
+            <input
+              id="guestbook-name"
+              name="name"
+              type="text"
+              maxlength={MAX_NAME_LENGTH * 2}
+              placeholder="署名（可以不填）"
+              autocomplete="nickname"
+              enterkeyhint="send"
+            />
+          </div>
+          <button type="submit" class="guestbook__send">
+            <Icon name="Send" />
+            <span>送出</span>
+          </button>
+        </fieldset>
+        {/* 需要點一下確認時，Turnstile 會出現在這裡；平常是空的 */}
+        <div class="guestbook__captcha" id="guestbook-captcha"></div>
+        <p class="guestbook__status" id="guestbook-status" role="status" aria-live="polite">
+          <noscript>要開啟 JavaScript 才能留言喔。</noscript>
+        </p>
+      </form>
+    </section>
+  )
+}
+
+<style>
+  .panel {
+    --delay: 120ms;
+  }
+
+  .guestbook__head {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 12px;
+    margin-bottom: 6px;
+  }
+
+  .guestbook__head .panel-title {
+    margin: 0;
+  }
+
+  .guestbook__toggle {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    min-height: 32px;
+    margin: -6px 0;
+    padding: 0 12px;
+    border: 0;
+    border-radius: 999px;
+    background: var(--accent-soft);
+    color: var(--accent);
+    font: inherit;
+    font-size: 13px;
+    font-weight: 700;
+    cursor: pointer;
+    transition:
+      background-color 0.2s var(--ease),
+      color 0.2s var(--ease);
+  }
+
+  .guestbook__toggle[aria-pressed="false"] {
+    background: transparent;
+    box-shadow: inset 0 0 0 1px var(--track);
+    color: var(--text-2);
+  }
+
+  .guestbook__toggle :global(svg) {
+    width: 15px;
+    height: 15px;
+  }
+
+  .guestbook__hint {
+    margin: 0 0 14px;
+    color: var(--text-2);
+    font-size: 13px;
+    line-height: 1.5;
+  }
+
+  /* 第一排：想說的話；第二排：署名 + 送出 */
+  .guestbook__form fieldset {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
+    gap: 8px;
+    min-width: 0;
+    margin: 0;
+    padding: 0;
+    border: 0;
+  }
+
+  .guestbook__form fieldset:disabled {
+    opacity: 0.55;
+  }
+
+  .guestbook__field {
+    display: flex;
+    grid-column: 1 / -1;
+    align-items: center;
+    gap: 8px;
+    min-width: 0;
+    padding: 0 14px;
+    border-radius: 999px;
+  }
+
+  .guestbook__field--name {
+    grid-column: 1;
+  }
+
+  .guestbook__dash {
+    color: var(--text-2);
+    font-size: 13px;
+    letter-spacing: -2px;
+  }
+
+  .guestbook__field:focus-within {
+    box-shadow: 0 0 0 2px var(--accent);
+  }
+
+  .guestbook__field input {
+    flex: 1;
+    min-width: 0;
+    height: 44px;
+    border: 0;
+    background: none;
+    color: var(--text);
+    font: inherit;
+    font-size: 15px;
+    outline: none;
+  }
+
+  .guestbook__field input::placeholder {
+    color: var(--text-2);
+  }
+
+  .guestbook__count {
+    color: var(--text-2);
+    font-size: 12px;
+    font-variant-numeric: tabular-nums;
+  }
+
+  .guestbook__count.is-over {
+    color: var(--danger);
+    font-weight: 700;
+  }
+
+  .guestbook__send {
+    display: inline-flex;
+    flex: none;
+    align-items: center;
+    gap: 6px;
+    height: 44px;
+    padding: 0 16px;
+    border: 0;
+    border-radius: 999px;
+    background: var(--accent);
+    color: var(--on-accent, #fff);
+    font: inherit;
+    font-size: 14px;
+    font-weight: 700;
+    cursor: pointer;
+    transition:
+      transform 0.3s var(--spring),
+      opacity 0.2s var(--ease);
+  }
+
+  .guestbook__send:hover {
+    transform: translateY(-1px);
+  }
+
+  .guestbook__send:disabled {
+    cursor: progress;
+    opacity: 0.7;
+    transform: none;
+  }
+
+  .guestbook__send :global(svg) {
+    width: 16px;
+    height: 16px;
+  }
+
+  .guestbook__captcha:not(:empty) {
+    margin-top: 12px;
+  }
+
+  .guestbook__status {
+    min-height: 1.5em;
+    margin: 8px 4px 0;
+    color: var(--text-2);
+    font-size: 13px;
+  }
+
+  .guestbook__status.is-error {
+    color: var(--danger);
+  }
+
+  .guestbook__status.is-ok {
+    color: var(--accent);
+    font-weight: 700;
+  }
+
+  @media (max-width: 369px) {
+    .guestbook__send span {
+      display: none;
+    }
+  }
+</style>
