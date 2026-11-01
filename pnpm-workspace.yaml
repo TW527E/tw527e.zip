@@ -1,0 +1,7 @@
+# pnpm 預設不讓套件在安裝時跑腳本，要一個一個允許。
+# 沒列在這裡又需要跑腳本的話，在 CI（Cloudflare 建置）會直接失敗。
+allowBuilds:
+  # Astro / Vite 用的打包工具，安裝時下載對應平台的執行檔
+  esbuild: true
+  # wrangler 在本機跑 Worker 用的執行環境
+  workerd: true
