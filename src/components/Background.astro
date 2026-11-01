@@ -8,12 +8,29 @@
 </div>
 
 <style>
+  /*
+   * iOS 26 起的 Safari：網址列是浮在畫面上的半透明玻璃。
+   * - 貼著底部（bottom: 0）的 fixed 元素會被放在網址列「上面」，網址列後面就沒有背景。
+   *   所以不設 bottom，改用 100lvh（網址列收起來時的高度），讓背景一路延伸到網址列後面。
+   * - Safari 會拿貼邊 fixed 元素「自己的」底色去填網址列那一塊，所以 .bg 本身保持透明，
+   *   底色放在 ::before（Safari 不看偽元素），網址列才會透出背景圖。
+   */
   .bg {
     position: fixed;
-    inset: 0;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 100vh;
+    height: 100lvh;
     z-index: -1;
     overflow: hidden;
-    /* 圖片還沒來、或全部失敗時看到的底色 */
+  }
+
+  /* 圖片還沒來、或全部失敗時看到的底色 */
+  .bg::before {
+    content: "";
+    position: absolute;
+    inset: 0;
     background: var(--page);
   }
 
