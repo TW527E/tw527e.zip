@@ -1,21 +1,26 @@
-// 留言 API（Cloudflare Pages Functions）
+// 留言 API
 //   GET  /api/messages → 最新的留言，給首頁做彈幕
 //   POST /api/messages → 留一句話，要帶 Turnstile 的驗證 token
 //
-// 需要在 Cloudflare Pages 專案設定：
-//   - D1 綁定，變數名稱 DB（資料表第一次用到時會自動建立）
-//   - 加密的環境變數 TURNSTILE_SECRET（Turnstile 的 secret key）
-// 設定方式見 README。
+// 需要的設定：
+//   - D1 綁定 DB：寫在 wrangler.jsonc，第一次部署時會自動建立資料庫，資料表第一次用到時自動建立
+//   - 加密的環境變數 TURNSTILE_SECRET（Turnstile 的 secret key）：到 Cloudflare 後台設定，見 README
 
-import { normalize, reject, rejectName } from "../_lib/filter";
+import { normalize, reject, rejectName } from "./filter";
 
-interface Env {
+export interface Env {
+  ASSETS: Fetcher;
   DB?: D1Database;
   TURNSTILE_SECRET?: string;
 }
 
 /** 首頁一次拿多少則 */
 const LIST_LIMIT = 200;
+/**
+ * 留言清單在 Cloudflare 邊緣快取幾秒。不管多少人同時開首頁，這段時間內最多只讀一次資料庫，
+ * D1 的免費讀取額度就不會被吃光。有人留言時會清掉快取，新留言不用等。
+ */
+const LIST_CACHE_SECONDS = 30;
 /** 同一個人兩則之間至少隔多久（ms） */
 const COOLDOWN = 60_000;
 /** 同一個人一天最多幾則 */
@@ -83,19 +88,29 @@ async function verifyTurnstile(secret: string, token: string, ip: string) {
   return result.success === true;
 }
 
-export const onRequestGet: PagesFunction<Env> = async ({ env }) => {
+/** 邊緣快取用的 key：只看網址，不管請求帶了什麼標頭 */
+const listCacheKey = (request: Request) => new Request(new URL(request.url).origin + "/api/messages", { method: "GET" });
+
+export async function listMessages(request: Request, env: Env, ctx: ExecutionContext) {
   if (!env.DB) return fail("留言功能還沒設定好", 503);
+  const cache = caches.default;
+  const key = listCacheKey(request);
+  const hit = await cache.match(key);
+  if (hit) return hit;
+
   await ensureSchema(env.DB);
   const { results } = await env.DB.prepare(
     "SELECT id, text, name, created_at FROM messages WHERE hidden = 0 ORDER BY id DESC LIMIT ?",
   )
     .bind(LIST_LIMIT)
     .all<{ id: number; text: string; name: string; created_at: number }>();
-  // 快取 30 秒；刪掉的留言最慢 30 秒後就不會再出現
-  return json({ ok: true, messages: results }, 200, { "Cache-Control": "public, max-age=30" });
-};
+  // 刪掉的留言最慢 30 秒後就不會再出現
+  const res = json({ ok: true, messages: results }, 200, { "Cache-Control": `public, max-age=${LIST_CACHE_SECONDS}` });
+  ctx.waitUntil(cache.put(key, res.clone()));
+  return res;
+}
 
-export const onRequestPost: PagesFunction<Env> = async ({ request, env }) => {
+export async function postMessage(request: Request, env: Env, ctx: ExecutionContext) {
   if (!env.DB || !env.TURNSTILE_SECRET) return fail("留言功能還沒設定好", 503);
 
   // 只收自己網站送來的
@@ -131,5 +146,7 @@ export const onRequestPost: PagesFunction<Env> = async ({ request, env }) => {
   const row = await env.DB.prepare("INSERT INTO messages (text, name, created_at, ip_hash) VALUES (?, ?, ?, ?) RETURNING id")
     .bind(text, name, now, hash)
     .first<{ id: number }>();
+  // 清掉留言清單的快取，下一個開首頁的人就看得到新留言
+  ctx.waitUntil(caches.default.delete(listCacheKey(request)));
   return json({ ok: true, message: { id: row?.id, text, name, created_at: now } }, 201);
-};
+}

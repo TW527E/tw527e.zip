@@ -1,5 +1,5 @@
 // 留言板：留一句話，送出前才載入 Turnstile 人機驗證（不拖慢首頁載入），成功後變成彈幕。
-import { MAX_LENGTH, normalize, reject, rejectName } from "../../functions/_lib/filter";
+import { MAX_LENGTH, normalize, reject, rejectName } from "../../worker/filter";
 
 const NAME_KEY = "guestbook-name";
 const TURNSTILE_SRC = "https://challenges.cloudflare.com/turnstile/v0/api.js?render=explicit";

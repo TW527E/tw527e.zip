@@ -15,8 +15,8 @@
     "dev:lan": "astro dev --host",
     "build": "astro build",
     "preview": "astro preview",
-    "check": "astro check && tsc -p functions",
-    "dev:api": "wrangler pages dev dist --d1 DB --compatibility-date 2026-10-01 --port 8788"
+    "check": "astro check && tsc -p worker",
+    "dev:api": "wrangler dev --port 8788"
   },
   "dependencies": {
     "astro": "^7.4.4",
