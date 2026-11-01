@@ -6,12 +6,14 @@ export interface SocialLink {
   url: string;
   /** simple-icons 的 SVG path */
   icon: string;
+  /** 很扁的文字標誌：只取中間那一條，並讓它用比較寬的空間（不然在圓鈕裡會小到看不清楚） */
+  wide?: { viewBox: string };
 }
 
 // 個人卡上那一排圓形圖示
 export const socialLinks: SocialLink[] = [
   { name: "GitHub", url: "https://github.com/TW527E", icon: siGithub.path },
-  { name: "VRChat", url: "https://vrchat.com/home/user/usr_086517a9-e1c3-4b4a-a35a-d8453e62b674", icon: siVrchat.path },
+  { name: "VRChat", url: "https://vrchat.com/home/user/usr_086517a9-e1c3-4b4a-a35a-d8453e62b674", icon: siVrchat.path, wide: { viewBox: "0 6.6 24 10.8" } },
   { name: "osu!", url: "https://osu.ppy.sh/users/13903088", icon: siOsu.path },
   { name: "Steam", url: "https://steamcommunity.com/id/TW527E/", icon: siSteam.path },
   { name: "Bilibili", url: "https://space.bilibili.com/453006174", icon: siBilibili.path },

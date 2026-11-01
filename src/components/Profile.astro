@@ -25,8 +25,8 @@ import CopyButton from "./CopyButton.astro";
     {
       socialLinks.map((link) => (
         <li>
-          <a class="tile" href={link.url} target="_blank" rel="noopener noreferrer" aria-label={link.name} title={link.name}>
-            <BrandIcon path={link.icon} />
+          <a class:list={["tile", { "is-wide": link.wide }]} href={link.url} target="_blank" rel="noopener noreferrer" aria-label={link.name} title={link.name}>
+            <BrandIcon path={link.icon} viewBox={link.wide?.viewBox} />
           </a>
         </li>
       ))
@@ -161,6 +161,11 @@ import CopyButton from "./CopyButton.astro";
   .social :global(svg) {
     width: min(20px, 50%);
     height: auto;
+  }
+
+  /* 扁的標誌（VRChat）：橫向多用一點空間，看起來才跟其他圖示一樣大 */
+  .social .is-wide :global(svg) {
+    width: min(32px, 80%);
   }
 
   /* ---- 聯絡切換卡 ---- */
