@@ -1,6 +1,6 @@
 // 留言 API
 //   GET  /api/messages → 最新的留言，給首頁做彈幕
-//   POST /api/messages → 留一句話，要帶 Turnstile 的驗證 token
+//   POST /api/messages → 留句話給我，要帶 Turnstile 的驗證 token
 //
 // 需要的設定：
 //   - D1 綁定 DB：寫在 wrangler.jsonc，第一次部署時會自動建立資料庫，資料表第一次用到時自動建立
@@ -92,7 +92,7 @@ async function verifyTurnstile(secret: string, token: string, ip: string) {
 const listCacheKey = (request: Request) => new Request(new URL(request.url).origin + "/api/messages", { method: "GET" });
 
 export async function listMessages(request: Request, env: Env, ctx: ExecutionContext) {
-  if (!env.DB) return fail("留言功能還沒設定好", 503);
+  if (!env.DB) return fail("留言板還沒設定好", 503);
   const cache = caches.default;
   const key = listCacheKey(request);
   const hit = await cache.match(key);
@@ -111,28 +111,28 @@ export async function listMessages(request: Request, env: Env, ctx: ExecutionCon
 }
 
 export async function postMessage(request: Request, env: Env, ctx: ExecutionContext) {
-  if (!env.DB || !env.TURNSTILE_SECRET) return fail("留言功能還沒設定好", 503);
+  if (!env.DB || !env.TURNSTILE_SECRET) return fail("留言板還沒設定好", 503);
 
   // 只收自己網站送來的
   const origin = request.headers.get("Origin");
-  if (origin && origin !== new URL(request.url).origin) return fail("不能從別的網站送出", 403);
-  if (Number(request.headers.get("Content-Length") ?? 0) > 2048) return fail("內容太長了", 413);
+  if (origin && origin !== new URL(request.url).origin) return fail("只能從這個網站留言", 403);
+  if (Number(request.headers.get("Content-Length") ?? 0) > 2048) return fail("太長了，短一點吧", 413);
 
   let body: { text?: unknown; name?: unknown; token?: unknown };
   try {
     body = await request.json();
   } catch {
-    return fail("格式不對", 400);
+    return fail("資料格式不對", 400);
   }
 
   const text = normalize(body.text);
   const name = normalize(body.name);
   const problem = reject(text) ?? rejectName(name);
   if (problem) return fail(problem, 400);
-  if (typeof body.token !== "string" || body.token.length === 0) return fail("請先完成人機驗證", 400);
+  if (typeof body.token !== "string" || body.token.length === 0) return fail("先完成人機驗證才能送出", 400);
 
   const ip = request.headers.get("CF-Connecting-IP") ?? "";
-  if (!(await verifyTurnstile(env.TURNSTILE_SECRET, body.token, ip))) return fail("人機驗證沒通過，再試一次", 403);
+  if (!(await verifyTurnstile(env.TURNSTILE_SECRET, body.token, ip))) return fail("驗證沒過，再試一次看看", 403);
 
   await ensureSchema(env.DB);
   const now = Date.now();
@@ -140,8 +140,8 @@ export async function postMessage(request: Request, env: Env, ctx: ExecutionCont
   const recent = await env.DB.prepare("SELECT COUNT(*) AS count, MAX(created_at) AS last FROM messages WHERE ip_hash = ? AND created_at > ?")
     .bind(hash, now - DAY)
     .first<{ count: number; last: number | null }>();
-  if (recent?.last && now - recent.last < COOLDOWN) return fail("留太快了，等一分鐘再來", 429);
-  if ((recent?.count ?? 0) >= DAILY_LIMIT) return fail(`一天最多留 ${DAILY_LIMIT} 句，明天再來吧`, 429);
+  if (recent?.last && now - recent.last < COOLDOWN) return fail("留得太快了，等一分鐘再留", 429);
+  if ((recent?.count ?? 0) >= DAILY_LIMIT) return fail(`今天已經留滿 ${DAILY_LIMIT} 句了，明天再來吧`, 429);
 
   const row = await env.DB.prepare("INSERT INTO messages (text, name, created_at, ip_hash) VALUES (?, ?, ?, ?) RETURNING id")
     .bind(text, name, now, hash)

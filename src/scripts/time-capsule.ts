@@ -61,7 +61,7 @@ function render(root: HTMLElement) {
     const [y, m, d] = sinceDate.split("-").map(Number);
     const days = daysBetween(new Date(y, (m || 1) - 1, d || 1), now);
     if (Number.isFinite(days) && days >= 0) {
-      since.replaceChildren("這個小站已經開了 ", Object.assign(document.createElement("strong"), { textContent: days.toLocaleString("zh-TW") }), " 天，謝謝你來玩");
+      since.replaceChildren("這個小站開了 ", Object.assign(document.createElement("strong"), { textContent: days.toLocaleString("zh-TW") }), " 天了，謝謝你來逛");
       since.hidden = false;
     }
   }

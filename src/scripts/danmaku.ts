@@ -135,7 +135,7 @@ export function initDanmaku() {
   const setOn = (value: boolean) => {
     on = value;
     toggle?.setAttribute("aria-pressed", String(on));
-    if (toggle) toggle.title = on ? "關掉彈幕" : "打開彈幕";
+    if (toggle) toggle.title = on ? "關閉彈幕" : "開啟彈幕";
     if (on) start();
     else stop();
   };

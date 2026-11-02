@@ -2,9 +2,9 @@ type ThemeChoice = "auto" | "light" | "dark";
 
 const ORDER: ThemeChoice[] = ["auto", "light", "dark"];
 const LABEL: Record<ThemeChoice, string> = {
-  auto: "主題：跟著系統（點一下切換）",
-  light: "主題：淺色（點一下切換）",
-  dark: "主題：深色（點一下切換）",
+  auto: "主題：跟系統一樣（點一下換）",
+  light: "主題：淺色（點一下換）",
+  dark: "主題：深色（點一下換）",
 };
 
 function readChoice(): ThemeChoice {

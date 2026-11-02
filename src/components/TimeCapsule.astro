@@ -11,7 +11,7 @@ const items = [
 ---
 
 <section class="panel glass rise" data-refract aria-labelledby="capsule-title">
-  <h2 id="capsule-title" class="panel-title"><Icon name="Hourglass" />時間膠囊</h2>
+  <h2 id="capsule-title" class="panel-title"><Icon name="Hourglass" />時間進度</h2>
   <div class="capsule" id="capsule" data-since={site.since}>
     {
       items.map((item) => (
@@ -20,7 +20,7 @@ const items = [
             <span class="capsule__label">{item.label}</span>
             <span class="capsule__pct" data-pct>–</span>
           </div>
-          <div class="capsule__track" role="progressbar" aria-label={`${item.label}過了多少`} aria-valuemin="0" aria-valuemax="100">
+          <div class="capsule__track" role="progressbar" aria-label={`${item.label}已經過了多少`} aria-valuemin="0" aria-valuemax="100">
             <div class="capsule__bar" data-bar />
           </div>
           <div class="capsule__left" data-left />
