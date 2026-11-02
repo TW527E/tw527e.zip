@@ -1,10 +1,13 @@
 // Liquid glass 的邊緣折射：卡片邊緣附近的背景會被往內「推」，像透過厚玻璃的圓角邊緣在看背景。
 //
+// 能用 WebGL 的話（幾乎所有瀏覽器，手機也是）用 scripts/liquid-gl.ts：有色散和邊緣高光，也最省。
+// 下面是沒有 WebGL 時的備案，只在寬螢幕做。
+//
 // 位移貼圖用 public/glass/ 裡事先做好的碎片（四個圓角 + 四條邊，scripts/make-glass-maps.mjs 產生），
 // 依每張卡片的實際尺寸拼起來；折射帶固定幾個 px，卡片再長也不會被拉變形。
 // 瀏覽器只肯讓濾鏡讀同網域的圖片檔，data: / blob: 都不行，所以不能在前端即時畫。
 //
-// 兩種做法：
+// 備案有兩種做法：
 // - Chromium：backdrop-filter 直接引用 SVG 濾鏡。
 // - Safari、Firefox：backdrop-filter 不支援 SVG 濾鏡，改在卡片裡放一份對齊畫面的背景副本。
 //   副本畫在 <svg> 裡、濾鏡也套在 SVG 元素上：Safari 把 SVG 濾鏡套在 HTML 元素上時，
@@ -15,23 +18,12 @@ import { glSupported, initGlass } from "./liquid-gl";
 import { isLite } from "./perf";
 
 const SVG_NS = "http://www.w3.org/2000/svg";
-const RES = Number(new URLSearchParams(location.search).get("res") ?? 1);
 /** 碎片的圓角種類，要跟 scripts/make-glass-maps.mjs 一致 */
 const RADII = [28, 32];
 /** 折射帶寬度（px），要跟 scripts/make-glass-maps.mjs 一致 */
 const BAND = 48;
 /** 邊緣最大位移（px） */
 const STRENGTH = 64;
-/** 邊緣有多清楚：越大，清透的範圍越寬（從最外圈往內，位移量 × 這個數 = 清透的程度） */
-const EDGE_CLEAR = 2;
-/** 色散：藍色比紅色多彎幾成 */
-const CHROMA = 0.3;
-/** 只留下紅、綠、藍其中一個通道（透明度不變），三個加起來就是完整的顏色 */
-const CHANNELS = [
-  "1 0 0 0 0  0 0 0 0 0  0 0 0 0 0  0 0 0 1 0",
-  "0 0 0 0 0  0 1 0 0 0  0 0 0 0 0  0 0 0 1 0",
-  "0 0 0 0 0  0 0 0 0 0  0 0 1 0 0  0 0 0 1 0",
-];
 /** 背景副本比卡片多出來的範圍（px），要比模糊半徑大 */
 const MIRROR_MARGIN = 40;
 /** 換成輕量模式時，折射淡出要多久（ms），要跟 global.css 的 .lite 一致 */
@@ -124,7 +116,7 @@ function buildFilter(w: number, h: number, inset: number, radius: number, units:
   for (const [name, x, y, pw, ph] of pieces) {
     filter.append(
       el("feImage", {
-        href: `/${new URLSearchParams(location.search).get("tiles") === "old" ? "glass-old" : "glass"}/r${r}-${name}.png`,
+        href: `/glass/r${r}-${name}.png`,
         x: (x + inset) * sx,
         y: (y + inset) * sy,
         width: pw * sx,
@@ -137,55 +129,13 @@ function buildFilter(w: number, h: number, inset: number, radius: number, units:
   }
   filter.append(merge);
 
-  const q = new URLSearchParams(location.search);
-  const strength = Number(q.get("strength") ?? STRENGTH);
-  const scale = units === "box" ? (strength * 2) / boxW : strength * 2;
+  const scale = units === "box" ? (STRENGTH * 2) / boxW : STRENGTH * 2;
   let source = "SourceGraphic";
   if (units === "px" && blur > 0) {
     filter.append(el("feGaussianBlur", { in: source, stdDeviation: blur, edgeMode: "duplicate", result: "frosted" }));
     source = "frosted";
   }
-  const chroma = Number(q.get("chroma") ?? 0);
-  const add = (a: string, b: string, result: string) =>
-    el("feComposite", { in: a, in2: b, operator: "arithmetic", k1: 0, k2: 1, k3: 1, k4: 0, result });
-  if (chroma && q.get("strips") === "1") {
-    // 單色折射整張，色散只在四條邊上算，再疊上去
-    filter.append(el("feDisplacementMap", { in: source, in2: "map", scale, xChannelSelector: "R", yChannelSelector: "G", result: "refracted0" }));
-    const strips: [number, number, number, number][] = [
-      [0, 0, w, BAND], [0, h - BAND, w, BAND], [0, BAND, BAND, h - 2 * BAND], [w - BAND, BAND, BAND, h - 2 * BAND],
-    ];
-    const merge2 = el("feMerge", { result: "refracted" });
-    merge2.append(el("feMergeNode", { in: "refracted0" }));
-    strips.forEach(([x, y, sw, sh], n) => {
-      const area = { x: (x + inset) * sx, y: (y + inset) * sy, width: sw * sx, height: sh * sy };
-      CHANNELS.forEach((values, i) => {
-        filter.append(
-          el("feDisplacementMap", { in: source, in2: "map", scale: scale * (1 + (chroma * i) / 2), xChannelSelector: "R", yChannelSelector: "G", ...area }),
-          el("feColorMatrix", { type: "matrix", values, result: `s${n}c${i}`, ...area }),
-        );
-      });
-      const a2 = (a: string, b: string, result: string) => el("feComposite", { in: a, in2: b, operator: "arithmetic", k1: 0, k2: 1, k3: 1, k4: 0, result, ...area });
-      filter.append(a2(`s${n}c0`, `s${n}c1`, `s${n}rg`), a2(`s${n}rg`, `s${n}c2`, `s${n}`));
-      merge2.append(el("feMergeNode", { in: `s${n}` }));
-    });
-    filter.append(merge2);
-  } else if (!chroma) {
-    filter.append(el("feDisplacementMap", { in: source, in2: "map", scale, xChannelSelector: "R", yChannelSelector: "G", result: "refracted" }));
-  } else {
-    CHANNELS.forEach((values, i) => {
-      filter.append(
-        el("feDisplacementMap", { in: source, in2: "map", scale: scale * (1 + (chroma * i) / 2), xChannelSelector: "R", yChannelSelector: "G" }),
-        el("feColorMatrix", { type: "matrix", values, result: `ch${i}` }),
-      );
-    });
-    filter.append(add("ch0", "ch1", "rg"), add("rg", "ch2", "refracted"));
-  }
-  if (q.get("spec") === "1") {
-    filter.append(
-      el("feColorMatrix", { in: "map", type: "matrix", values: `0 0 0 0 1  0 0 0 0 1  0 0 0 0 1  0 0 2 0 ${-256 / 255}`, result: "rim" }),
-      add("rim", "refracted", "lit"),
-    );
-  }
+  filter.append(el("feDisplacementMap", { in: source, in2: "map", scale, xChannelSelector: "R", yChannelSelector: "G" }));
   return filter;
 }
 
@@ -197,7 +147,6 @@ function createMirror(card: HTMLElement): Mirror {
   svg.classList.add("refract-mirror__box");
   const layer = el("g", {});
   const view = el("g", {});
-  const scaler = el("g", { transform: `scale(${RES})` });
   const page = el("rect", { x: 0, y: 0 });
   page.classList.add("refract-mirror__page");
   const img = el("image", { preserveAspectRatio: "xMidYMid slice" });
@@ -206,10 +155,7 @@ function createMirror(card: HTMLElement): Mirror {
   scrim.classList.add("refract-mirror__scrim");
   view.append(page, img, scrim);
   layer.append(view);
-  scaler.append(layer);
-  svg.append(scaler);
-  svg.style.transform = `scale(${1 / RES})`;
-  svg.style.transformOrigin = "0 0";
+  svg.append(layer);
   box.append(svg);
   card.prepend(box);
   return { svg, layer, view, page, img, scrim };
@@ -256,7 +202,7 @@ function update(card: HTMLElement, mode: Mode) {
   if (w < 80 || h < 80) return;
   const style = getComputedStyle(card);
   const radius = parseFloat(style.borderTopLeftRadius) || 0;
-  // 模糊在濾鏡裡做，中間霧面、邊緣清透
+  // 背景副本的模糊在濾鏡裡做（Chromium 的模糊在 CSS 的 backdrop-filter 裡）
   const blur = parseFloat(style.getPropertyValue("--blur")) || 0;
   let entry = entries.get(card);
   const fresh = !entry;
@@ -273,13 +219,11 @@ function update(card: HTMLElement, mode: Mode) {
     const filter = buildFilter(w, h, inset, radius, mode === "mirror" ? "px" : "box", blur);
     ensureDefs().append(filter);
     if (entry.mirror) {
-      entry.mirror.svg.setAttribute("width", String((w + inset * 2) * RES));
-      entry.mirror.svg.setAttribute("height", String((h + inset * 2) * RES));
+      entry.mirror.svg.setAttribute("width", String(w + inset * 2));
+      entry.mirror.svg.setAttribute("height", String(h + inset * 2));
       entry.mirror.layer.setAttribute("filter", `url(#${filter.id})`);
     } else {
       card.style.setProperty("--refract", `url(#${filter.id})`);
-      const order = new URLSearchParams(location.search).get("order");
-      card.style.backdropFilter = order === "blurfirst" ? `blur(${blur}px) url(#${filter.id}) saturate(180%)` : `url(#${filter.id}) blur(${blur}px) saturate(180%)`;
     }
     entry.filter?.remove();
     entry.filter = filter;
@@ -295,8 +239,8 @@ function clear(card: HTMLElement) {
 }
 
 export function initLiquid() {
-  if (new URLSearchParams(location.search).has("gl") && glSupported()) return initLiquidGl();
-  const mode: Mode = isChromium() && new URLSearchParams(location.search).get("mode") !== "mirror" ? "backdrop" : "mirror";
+  if (glSupported()) return initLiquidGl();
+  const mode: Mode = isChromium() ? "backdrop" : "mirror";
   document.documentElement.classList.add("liquid", `liquid--${mode}`);
 
   // 窄螢幕（手機）或要求減少透明度時不做折射（省電、也比較好讀）。
@@ -330,6 +274,7 @@ export function initLiquid() {
     // 卡片會跟著頁面捲動、背景不會，所以捲動時要重新對齊副本。
     // 跑不動的裝置會換成輕量模式（scripts/perf.ts），不做折射，也就不用對齊了。
     window.addEventListener("scroll", () => schedule(targets), { passive: true });
+    window.addEventListener("page:shift", () => schedule(targets));
     window.addEventListener("resize", () => schedule(targets), { passive: true });
     // 進場動畫會移動卡片，結束後再對齊一次
     targets.forEach((card) => card.addEventListener("animationend", () => schedule([card])));
@@ -358,7 +303,7 @@ export function initLiquid() {
   apply();
 }
 
-/** 實驗：WebGL 版（scripts/liquid-gl.ts） */
+/** WebGL 版（scripts/liquid-gl.ts） */
 function initLiquidGl() {
   document.documentElement.classList.add("liquid", "liquid--gl");
   // WebGL 版很省，手機也開

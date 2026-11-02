@@ -198,18 +198,17 @@ export function initCursor() {
   );
   // 捲動事件一幀可能來好幾次，找滑鼠底下是什麼一幀做一次就好
   let scrollPick = 0;
-  window.addEventListener(
-    "scroll",
-    () => {
-      if (scrollPick) return;
-      scrollPick = requestAnimationFrame(() => {
-        scrollPick = 0;
-        pick(document.elementFromPoint(px, py));
-        kick();
-      });
-    },
-    { passive: true },
-  );
+  const repick = () => {
+    if (scrollPick) return;
+    scrollPick = requestAnimationFrame(() => {
+      scrollPick = 0;
+      pick(document.elementFromPoint(px, py));
+      kick();
+    });
+  };
+  window.addEventListener("scroll", repick, { passive: true });
+  // 拉過頭尾的回彈也會移動頁面
+  window.addEventListener("page:shift", repick);
   document.documentElement.addEventListener("pointerleave", () => ring.classList.remove("is-visible"));
   const press = (on: boolean) => {
     down = on;

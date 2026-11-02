@@ -1,4 +1,4 @@
-// 實驗：用 WebGL 畫玻璃的折射（網址加 ?gl 才會用）。
+// 用 WebGL 畫玻璃的折射、色散和邊緣高光（不支援 WebGL 時，scripts/liquid.ts 會退回 SVG 濾鏡）。
 //
 // 玻璃後面只有一張背景圖，所以不用截網頁：直接把背景圖交給 GPU。每張卡片分成兩層：
 // - 霧面：一張事先模糊好的背景圖，固定在畫面上（position: fixed），用 clip-path 裁成卡片的形狀。
@@ -8,19 +8,16 @@
 // 卡片上沒有 backdrop-filter，字、高光、游標重畫時，不用跟著重算玻璃。
 // 背景的漂移、淡入、深淺色的遮罩都從 .bg 讀，跟真正的背景對齊。
 
-const q = new URLSearchParams(location.search);
-const num = (key: string, fallback: number) => (q.has(key) ? Number(q.get(key)) : fallback);
-
 /** 折射帶寬度（px），跟 make-glass-maps.mjs 一樣 */
-const BAND = num("band", 48);
+const BAND = 48;
 /** 邊緣最大位移（px） */
-const STRENGTH = num("strength", 64);
+const STRENGTH = 64;
 /** 色散：藍色比紅色多彎幾成 */
-const CHROMA = num("chroma", 0.3);
+const CHROMA = 0.3;
 /** 邊緣有多清透：0 = 整張一樣霧，1 = 最外圈完全清楚 */
-const EDGE = num("edge", 0.7);
+const EDGE = 0.7;
 /** 邊緣高光強度（0–1）、寬度（px）、光源方向（度），跟 make-glass-maps.mjs 一樣 */
-const SPECULAR = num("spec", 0.7);
+const SPECULAR = 0.7;
 const SPECULAR_WIDTH = 1.5;
 const LIGHT_ANGLE = -120;
 const CURVATURE = 3;
@@ -31,8 +28,6 @@ const SATURATE = 1.8;
 const MAX_DPR = 2;
 /** 手機停止捲動多久之後，邊緣那層淡回來（ms） */
 const SCROLL_IDLE = 140;
-/** 觸控板拉過頁面頭尾之後，等多久（彈回去）邊緣那層才淡回來（ms） */
-const OVERSCROLL_IDLE = 700;
 
 type RGBA = [number, number, number, number];
 
@@ -632,30 +627,29 @@ export function initGlass(targets: HTMLElement[], wanted: { readonly matches: bo
     },
     { passive: true },
   );
-  // 觸控板可以拉過頁面的頭尾（彈一下），這時候頁面的捲動位置不會變、也沒有捲動事件，
-  // 只有滾輪事件：拉過頭的時候也淡出，等彈回去再回來
-  window.addEventListener(
-    "wheel",
-    (e) => {
-      const max = root.scrollHeight - window.innerHeight;
-      if ((e.deltaY < 0 && window.scrollY <= 0) || (e.deltaY > 0 && window.scrollY >= max - 1)) hideRim(OVERSCROLL_IDLE);
-    },
-    { passive: true },
-  );
 
+  const drawAll = () => {
+    const scene = readScene();
+    // 淡出的時候不用畫（還沒對齊、整張都用 WebGL 畫的卡片除外）
+    if (!scene) return;
+    for (const [card, pane] of panes) {
+      if (!scrolling || pane.opaque) pane.draw(scene, blurOf.get(card) ?? 0, radiusOf.get(card) ?? 0);
+    }
+  };
   const frame = () => {
     raf = 0;
     if (!wanted.matches) return;
-    const scene = readScene();
-    // 淡出的時候不用畫（還沒對齊、整張都用 WebGL 畫的卡片除外）
-    if (scene) {
-      for (const [card, pane] of panes) {
-        if (!scrolling || pane.opaque) pane.draw(scene, blurOf.get(card) ?? 0, radiusOf.get(card) ?? 0);
-      }
-    }
+    drawAll();
     // 背景一秒會動 3 次、捲動和進場動畫也會移動卡片：每一幀看一下，沒變就不畫
     raf = requestAnimationFrame(frame);
   };
+  // 拉過頭尾的回彈（scripts/overscroll.ts）移動頁面之後馬上重畫，不要晚一幀；
+  // 手機和掉幀的電腦跟捲動一樣先淡出
+  window.addEventListener("page:shift", () => {
+    if (!wanted.matches || !panes.size) return;
+    if (touch.matches || root.classList.contains("fade-rim")) hideRim(SCROLL_IDLE);
+    else drawAll();
+  });
 
   const observer = new ResizeObserver((records) => {
     for (const r of records) measure(r.target as HTMLElement);

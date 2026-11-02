@@ -5,6 +5,7 @@ import { initCursor } from "./cursor";
 import { initDanmaku } from "./danmaku";
 import { initGuestbook } from "./guestbook";
 import { initLiquid } from "./liquid";
+import { initOverscroll } from "./overscroll";
 import { initPerf } from "./perf";
 import { initPointerLight } from "./pointer-light";
 
@@ -13,6 +14,7 @@ initPerf();
 initLiquid();
 initPointerLight();
 initCursor();
+initOverscroll();
 initCopyButtons();
 initAvatarEgg();
 initGuestbook();

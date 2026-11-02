@@ -119,11 +119,14 @@
 html {
   -webkit-text-size-adjust: 100%;
   text-size-adjust: 100%;
+  /* 瀏覽器原生的回彈關掉，改用 scripts/overscroll.ts 自己做：原生的回彈玻璃和游標會對不上 */
+  overscroll-behavior-y: none;
 }
 
 body {
   margin: 0;
   min-height: 100dvh;
+  overscroll-behavior-y: none;
   background: var(--page);
   color: var(--text);
   font-family: var(--font-sans);
@@ -255,10 +258,10 @@ ul {
 
 /* 邊緣折射（scripts/liquid.ts 依卡片尺寸產生濾鏡，產生好才會加上 data-refract-ready） */
 
-/* Chromium：backdrop-filter 直接引用 SVG 濾鏡，模糊也在濾鏡裡（中間霧面、邊緣清透） */
+/* 沒有 WebGL 時的備案。Chromium：backdrop-filter 直接引用 SVG 濾鏡 */
 .liquid--backdrop .glass[data-refract-ready] {
-  -webkit-backdrop-filter: var(--refract) saturate(180%);
-  backdrop-filter: var(--refract) saturate(180%);
+  -webkit-backdrop-filter: var(--refract) blur(var(--blur)) saturate(180%);
+  backdrop-filter: var(--refract) blur(var(--blur)) saturate(180%);
 }
 
 /* Safari、Firefox：卡片裡放一份對齊畫面的背景副本，折射和模糊都套在副本上 */
@@ -267,7 +270,7 @@ ul {
   backdrop-filter: none;
 }
 
-/* 實驗：WebGL 版，畫布在卡片裡（scripts/liquid-gl.ts） */
+/* WebGL 版（scripts/liquid-gl.ts）：霧面和邊緣折射都畫在卡片裡，卡片本身不用 backdrop-filter */
 .liquid--gl .glass[data-refract-ready] {
   -webkit-backdrop-filter: none;
   backdrop-filter: none;
