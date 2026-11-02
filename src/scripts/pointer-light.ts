@@ -34,7 +34,7 @@ function idlePoint(time: number): [number, number] {
 
 export function initPointerLight() {
   const cards = [...document.querySelectorAll<HTMLElement>(".glass")];
-  if (cards.length === 0) return;
+  if (cards.length === 0 || new URLSearchParams(location.search).has("nolight")) return;
   const fine = window.matchMedia("(hover: hover) and (pointer: fine)");
   const reduce = window.matchMedia("(prefers-reduced-motion: reduce)");
   /** 上次有寫光源位置的卡片：離開光照範圍時要再寫最後一次，高光才會完全退掉 */

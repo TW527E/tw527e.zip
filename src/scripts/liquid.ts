@@ -11,15 +11,27 @@
 //   座標是從頁面左上角算、feImage 的圖片也不會畫出來，套在 SVG 元素上就正常。
 //   副本比卡片大一圈，模糊的邊緣落在裁掉的地方。
 
+import { glSupported, initGlass } from "./liquid-gl";
 import { isLite } from "./perf";
 
 const SVG_NS = "http://www.w3.org/2000/svg";
+const RES = Number(new URLSearchParams(location.search).get("res") ?? 1);
 /** 碎片的圓角種類，要跟 scripts/make-glass-maps.mjs 一致 */
 const RADII = [28, 32];
 /** 折射帶寬度（px），要跟 scripts/make-glass-maps.mjs 一致 */
-const BAND = 34;
+const BAND = 48;
 /** 邊緣最大位移（px） */
-const STRENGTH = 44;
+const STRENGTH = 64;
+/** 邊緣有多清楚：越大，清透的範圍越寬（從最外圈往內，位移量 × 這個數 = 清透的程度） */
+const EDGE_CLEAR = 2;
+/** 色散：藍色比紅色多彎幾成 */
+const CHROMA = 0.3;
+/** 只留下紅、綠、藍其中一個通道（透明度不變），三個加起來就是完整的顏色 */
+const CHANNELS = [
+  "1 0 0 0 0  0 0 0 0 0  0 0 0 0 0  0 0 0 1 0",
+  "0 0 0 0 0  0 1 0 0 0  0 0 0 0 0  0 0 0 1 0",
+  "0 0 0 0 0  0 0 0 0 0  0 0 1 0 0  0 0 0 1 0",
+];
 /** 背景副本比卡片多出來的範圍（px），要比模糊半徑大 */
 const MIRROR_MARGIN = 40;
 /** 換成輕量模式時，折射淡出要多久（ms），要跟 global.css 的 .lite 一致 */
@@ -76,7 +88,7 @@ function el<K extends keyof SVGElementTagNameMap>(tag: K, attrs: Record<string, 
  * 套濾鏡的範圍比卡片大 inset px，卡片本身在裡面。
  * Chromium 的 backdrop-filter 只認比例座標（objectBoundingBox），SVG 元素上用 px。
  */
-function buildFilter(w: number, h: number, inset: number, radius: number, units: "box" | "px") {
+function buildFilter(w: number, h: number, inset: number, radius: number, units: "box" | "px", blur: number) {
   const r = RADII.reduce((a, b) => (Math.abs(b - radius) < Math.abs(a - radius) ? b : a));
   const c = Math.max(r, BAND);
   const boxW = w + inset * 2;
@@ -112,7 +124,7 @@ function buildFilter(w: number, h: number, inset: number, radius: number, units:
   for (const [name, x, y, pw, ph] of pieces) {
     filter.append(
       el("feImage", {
-        href: `/glass/r${r}-${name}.png`,
+        href: `/${new URLSearchParams(location.search).get("tiles") === "old" ? "glass-old" : "glass"}/r${r}-${name}.png`,
         x: (x + inset) * sx,
         y: (y + inset) * sy,
         width: pw * sx,
@@ -124,11 +136,56 @@ function buildFilter(w: number, h: number, inset: number, radius: number, units:
     merge.append(el("feMergeNode", { in: name }));
   }
   filter.append(merge);
-  // 比例座標下 scale 也是比例（以寬度換算）
-  const scale = units === "box" ? (STRENGTH * 2) / boxW : STRENGTH * 2;
-  filter.append(
-    el("feDisplacementMap", { in: "SourceGraphic", in2: "map", scale, xChannelSelector: "R", yChannelSelector: "G" }),
-  );
+
+  const q = new URLSearchParams(location.search);
+  const strength = Number(q.get("strength") ?? STRENGTH);
+  const scale = units === "box" ? (strength * 2) / boxW : strength * 2;
+  let source = "SourceGraphic";
+  if (units === "px" && blur > 0) {
+    filter.append(el("feGaussianBlur", { in: source, stdDeviation: blur, edgeMode: "duplicate", result: "frosted" }));
+    source = "frosted";
+  }
+  const chroma = Number(q.get("chroma") ?? 0);
+  const add = (a: string, b: string, result: string) =>
+    el("feComposite", { in: a, in2: b, operator: "arithmetic", k1: 0, k2: 1, k3: 1, k4: 0, result });
+  if (chroma && q.get("strips") === "1") {
+    // 單色折射整張，色散只在四條邊上算，再疊上去
+    filter.append(el("feDisplacementMap", { in: source, in2: "map", scale, xChannelSelector: "R", yChannelSelector: "G", result: "refracted0" }));
+    const strips: [number, number, number, number][] = [
+      [0, 0, w, BAND], [0, h - BAND, w, BAND], [0, BAND, BAND, h - 2 * BAND], [w - BAND, BAND, BAND, h - 2 * BAND],
+    ];
+    const merge2 = el("feMerge", { result: "refracted" });
+    merge2.append(el("feMergeNode", { in: "refracted0" }));
+    strips.forEach(([x, y, sw, sh], n) => {
+      const area = { x: (x + inset) * sx, y: (y + inset) * sy, width: sw * sx, height: sh * sy };
+      CHANNELS.forEach((values, i) => {
+        filter.append(
+          el("feDisplacementMap", { in: source, in2: "map", scale: scale * (1 + (chroma * i) / 2), xChannelSelector: "R", yChannelSelector: "G", ...area }),
+          el("feColorMatrix", { type: "matrix", values, result: `s${n}c${i}`, ...area }),
+        );
+      });
+      const a2 = (a: string, b: string, result: string) => el("feComposite", { in: a, in2: b, operator: "arithmetic", k1: 0, k2: 1, k3: 1, k4: 0, result, ...area });
+      filter.append(a2(`s${n}c0`, `s${n}c1`, `s${n}rg`), a2(`s${n}rg`, `s${n}c2`, `s${n}`));
+      merge2.append(el("feMergeNode", { in: `s${n}` }));
+    });
+    filter.append(merge2);
+  } else if (!chroma) {
+    filter.append(el("feDisplacementMap", { in: source, in2: "map", scale, xChannelSelector: "R", yChannelSelector: "G", result: "refracted" }));
+  } else {
+    CHANNELS.forEach((values, i) => {
+      filter.append(
+        el("feDisplacementMap", { in: source, in2: "map", scale: scale * (1 + (chroma * i) / 2), xChannelSelector: "R", yChannelSelector: "G" }),
+        el("feColorMatrix", { type: "matrix", values, result: `ch${i}` }),
+      );
+    });
+    filter.append(add("ch0", "ch1", "rg"), add("rg", "ch2", "refracted"));
+  }
+  if (q.get("spec") === "1") {
+    filter.append(
+      el("feColorMatrix", { in: "map", type: "matrix", values: `0 0 0 0 1  0 0 0 0 1  0 0 0 0 1  0 0 2 0 ${-256 / 255}`, result: "rim" }),
+      add("rim", "refracted", "lit"),
+    );
+  }
   return filter;
 }
 
@@ -140,6 +197,7 @@ function createMirror(card: HTMLElement): Mirror {
   svg.classList.add("refract-mirror__box");
   const layer = el("g", {});
   const view = el("g", {});
+  const scaler = el("g", { transform: `scale(${RES})` });
   const page = el("rect", { x: 0, y: 0 });
   page.classList.add("refract-mirror__page");
   const img = el("image", { preserveAspectRatio: "xMidYMid slice" });
@@ -148,7 +206,10 @@ function createMirror(card: HTMLElement): Mirror {
   scrim.classList.add("refract-mirror__scrim");
   view.append(page, img, scrim);
   layer.append(view);
-  svg.append(layer);
+  scaler.append(layer);
+  svg.append(scaler);
+  svg.style.transform = `scale(${1 / RES})`;
+  svg.style.transformOrigin = "0 0";
   box.append(svg);
   card.prepend(box);
   return { svg, layer, view, page, img, scrim };
@@ -193,7 +254,10 @@ function update(card: HTMLElement, mode: Mode) {
   const w = Math.round(card.offsetWidth);
   const h = Math.round(card.offsetHeight);
   if (w < 80 || h < 80) return;
-  const radius = parseFloat(getComputedStyle(card).borderTopLeftRadius) || 0;
+  const style = getComputedStyle(card);
+  const radius = parseFloat(style.borderTopLeftRadius) || 0;
+  // 模糊在濾鏡裡做，中間霧面、邊緣清透
+  const blur = parseFloat(style.getPropertyValue("--blur")) || 0;
   let entry = entries.get(card);
   const fresh = !entry;
   if (!entry) {
@@ -201,19 +265,21 @@ function update(card: HTMLElement, mode: Mode) {
     if (mode === "mirror") entry.mirror = createMirror(card);
     entries.set(card, entry);
   }
-  const key = `${w}x${h}r${radius}`;
+  const key = `${w}x${h}r${radius}b${blur}`;
   if (entry.key !== key) {
     entry.key = key;
     // 每次換一個新的濾鏡：Safari 不會因為濾鏡內容改了就重畫，換掉引用才會
     const inset = mode === "mirror" ? MIRROR_MARGIN : 0;
-    const filter = buildFilter(w, h, inset, radius, mode === "mirror" ? "px" : "box");
+    const filter = buildFilter(w, h, inset, radius, mode === "mirror" ? "px" : "box", blur);
     ensureDefs().append(filter);
     if (entry.mirror) {
-      entry.mirror.svg.setAttribute("width", String(w + inset * 2));
-      entry.mirror.svg.setAttribute("height", String(h + inset * 2));
+      entry.mirror.svg.setAttribute("width", String((w + inset * 2) * RES));
+      entry.mirror.svg.setAttribute("height", String((h + inset * 2) * RES));
       entry.mirror.layer.setAttribute("filter", `url(#${filter.id})`);
     } else {
       card.style.setProperty("--refract", `url(#${filter.id})`);
+      const order = new URLSearchParams(location.search).get("order");
+      card.style.backdropFilter = order === "blurfirst" ? `blur(${blur}px) url(#${filter.id}) saturate(180%)` : `url(#${filter.id}) blur(${blur}px) saturate(180%)`;
     }
     entry.filter?.remove();
     entry.filter = filter;
@@ -229,7 +295,8 @@ function clear(card: HTMLElement) {
 }
 
 export function initLiquid() {
-  const mode: Mode = isChromium() ? "backdrop" : "mirror";
+  if (new URLSearchParams(location.search).has("gl") && glSupported()) return initLiquidGl();
+  const mode: Mode = isChromium() && new URLSearchParams(location.search).get("mode") !== "mirror" ? "backdrop" : "mirror";
   document.documentElement.classList.add("liquid", `liquid--${mode}`);
 
   // 窄螢幕（手機）或要求減少透明度時不做折射（省電、也比較好讀）。
@@ -285,6 +352,21 @@ export function initLiquid() {
   wide.addEventListener("change", apply);
   reduce.addEventListener("change", apply);
   // 換成輕量模式：等折射淡出之後再拆掉
+  document.addEventListener("perf:lite", () => setTimeout(apply, LITE_FADE));
+  apply();
+}
+
+/** 實驗：WebGL 版（scripts/liquid-gl.ts） */
+function initLiquidGl() {
+  document.documentElement.classList.add("liquid", "liquid--gl");
+  const wide = window.matchMedia("(min-width: 960px)");
+  const reduce = window.matchMedia("(prefers-reduced-transparency: reduce)");
+  const wanted = { get matches() { return wide.matches && !reduce.matches && !isLite(); } };
+  const targets = [...document.querySelectorAll<HTMLElement>("[data-refract]")];
+  const apply = initGlass(targets, wanted);
+  if (!apply) return;
+  wide.addEventListener("change", apply);
+  reduce.addEventListener("change", apply);
   document.addEventListener("perf:lite", () => setTimeout(apply, LITE_FADE));
   apply();
 }

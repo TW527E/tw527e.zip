@@ -31,6 +31,7 @@
   --danmaku-text: #14161c;
   --accent-soft: rgb(156 63 20 / 0.12);
   --focus: #9c3f14;
+  --selection: rgb(20 22 28 / 0.14);
   --page: #dfe7f2;
   --scrim: rgb(255 255 255 / 0.06);
   --glass: rgb(255 255 255 / 0.38);
@@ -65,6 +66,7 @@
     --danmaku-text: #f5f2ee;
     --accent-soft: rgb(255 178 125 / 0.16);
     --focus: #ffb27d;
+    --selection: rgb(255 255 255 / 0.22);
     --page: #11131b;
     --scrim: rgb(5 6 12 / 0.3);
     --glass: rgb(18 18 26 / 0.4);
@@ -91,6 +93,7 @@
   --danger: #ff8a9a;
   --accent-soft: rgb(255 178 125 / 0.16);
   --focus: #ffb27d;
+  --selection: rgb(255 255 255 / 0.22);
   --page: #11131b;
   --scrim: rgb(5 6 12 / 0.3);
   --glass: rgb(18 18 26 / 0.4);
@@ -154,6 +157,12 @@ ul {
 :focus-visible {
   outline: 2px solid var(--focus);
   outline-offset: 3px;
+}
+
+/* 選取文字：不用瀏覽器預設的藍色，改成淺灰色，字的顏色不變 */
+::selection {
+  background: var(--selection);
+  color: inherit;
 }
 
 .visually-hidden {
@@ -246,16 +255,29 @@ ul {
 
 /* 邊緣折射（scripts/liquid.ts 依卡片尺寸產生濾鏡，產生好才會加上 data-refract-ready） */
 
-/* Chromium：backdrop-filter 直接引用 SVG 濾鏡 */
+/* Chromium：backdrop-filter 直接引用 SVG 濾鏡，模糊也在濾鏡裡（中間霧面、邊緣清透） */
 .liquid--backdrop .glass[data-refract-ready] {
-  -webkit-backdrop-filter: var(--refract) blur(var(--blur)) saturate(180%);
-  backdrop-filter: var(--refract) blur(var(--blur)) saturate(180%);
+  -webkit-backdrop-filter: var(--refract) saturate(180%);
+  backdrop-filter: var(--refract) saturate(180%);
 }
 
 /* Safari、Firefox：卡片裡放一份對齊畫面的背景副本，折射和模糊都套在副本上 */
 .liquid--mirror .glass[data-refract-ready] {
   -webkit-backdrop-filter: none;
   backdrop-filter: none;
+}
+
+/* 實驗：WebGL 版，畫布在卡片裡（scripts/liquid-gl.ts） */
+.liquid--gl .glass[data-refract-ready] {
+  -webkit-backdrop-filter: none;
+  backdrop-filter: none;
+}
+
+.refract-mirror__gl {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
 }
 
 .refract-mirror {
@@ -298,13 +320,13 @@ ul {
     visibility 0s 0.6s;
 }
 
-/* 比卡片大一圈，模糊的邊緣會落在被裁掉的地方。折射在 SVG 裡做，這裡只負責模糊和飽和度 */
+/* 比卡片大一圈，模糊的邊緣會落在被裁掉的地方。模糊和折射在 SVG 濾鏡裡做，這裡只負責飽和度 */
 .refract-mirror__box {
   position: absolute;
   top: -40px;
   left: -40px;
   overflow: hidden;
-  filter: blur(var(--blur)) saturate(180%);
+  filter: saturate(180%);
 }
 
 .refract-mirror__page {
