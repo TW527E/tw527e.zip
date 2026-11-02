@@ -21,5 +21,8 @@
   ],
   "observability": {
     "enabled": true
-  }
+  },
+  // PR 和 main 以外的分支會用 `wrangler preview` 部署成預覽網址，一定要有這個區塊。
+  // 預覽不會沿用上面的 D1 和 Secret，所以預覽網址的留言板會顯示「還沒設定好」，也碰不到正式的留言。
+  "previews": {}
 }

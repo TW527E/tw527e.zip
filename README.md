@@ -58,6 +58,7 @@ pnpm dev:api      # 連留言 API 一起跑（要先 pnpm build），http://loca
 - 靜態檔案（網頁、圖片、CSS、JS）由 Cloudflare 直接回應，免費、不限次數。
 - 只有 `/api/*` 會跑 Worker，算進免費方案每天 10 萬次的額度。
 - `public/_headers` 一樣會套用，裡面有 CSP 和其他安全標頭；如果之後背景改用外部 API，記得把那個網域加進 `img-src`。
+- `public/sw.js` 不要刪：舊主頁在訪客瀏覽器裝了 Service Worker，會一直顯示舊網頁。這份會把它換掉、清快取、取消註冊，再自動重新整理成新網站。
 
 第一次部署：
 
