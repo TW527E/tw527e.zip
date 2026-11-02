@@ -71,6 +71,8 @@ export function initCursor() {
     };
   };
 
+  /** 停下來之後畫過最後一次了沒 */
+  let drawn = false;
   const tick = () => {
     const g = goal();
     let moving = false;
@@ -83,11 +85,16 @@ export function initCursor() {
         cur[k] = g[k];
       }
     }
-    ring.style.width = `${cur.w}px`;
-    ring.style.height = `${cur.h}px`;
-    ring.style.borderRadius = `${cur.r}px`;
-    // 縮放要放在位移後面，才會以游標自己為中心縮小，不會被拉往畫面左上角
-    ring.style.transform = `translate3d(${cur.x - cur.w / 2}px, ${cur.y - cur.h / 2}px, 0) scale(${cur.s})`;
+    // 吸附時每一幀都會跑到這裡，但大部分時候沒變；沒變就不要寫，不然每一幀都要重畫
+    if (moving || !drawn) {
+      // 停下來的那一幀還要再畫一次：上面把最後一點距離直接補到位了
+      drawn = !moving;
+      ring.style.width = `${cur.w}px`;
+      ring.style.height = `${cur.h}px`;
+      ring.style.borderRadius = `${cur.r}px`;
+      // 縮放要放在位移後面，才會以游標自己為中心縮小，不會被拉往畫面左上角
+      ring.style.transform = `translate3d(${cur.x - cur.w / 2}px, ${cur.y - cur.h / 2}px, 0) scale(${cur.s})`;
+    }
     // 吸附中的按鈕本身也可能在動（hover 彈跳），所以吸附時持續更新
     raf = moving || target ? requestAnimationFrame(tick) : 0;
   };
@@ -165,11 +172,17 @@ export function initCursor() {
     },
     { passive: true },
   );
+  // 捲動事件一幀可能來好幾次，找滑鼠底下是什麼一幀做一次就好
+  let scrollPick = 0;
   window.addEventListener(
     "scroll",
     () => {
-      pick(document.elementFromPoint(px, py));
-      kick();
+      if (scrollPick) return;
+      scrollPick = requestAnimationFrame(() => {
+        scrollPick = 0;
+        pick(document.elementFromPoint(px, py));
+        kick();
+      });
     },
     { passive: true },
   );

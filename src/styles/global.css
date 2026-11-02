@@ -4,17 +4,20 @@
   font-display: swap;
 }
 
-/* 滑鼠光源位置（JS 會更新；沒動滑鼠時由動畫帶著飄） */
+/*
+ * 光源在卡片裡的位置（scripts/pointer-light.ts 寫在每張 .glass 上）。
+ * 不往下繼承：改了只有卡片自己要重算樣式，裡面的東西不用跟著重算。
+ */
 @property --mx {
-  syntax: "<length>";
-  inherits: true;
-  initial-value: 30vw;
+  syntax: "<length-percentage>";
+  inherits: false;
+  initial-value: 30%;
 }
 
 @property --my {
-  syntax: "<length>";
-  inherits: true;
-  initial-value: 12vh;
+  syntax: "<length-percentage>";
+  inherits: false;
+  initial-value: 12%;
 }
 
 :root {
@@ -46,8 +49,6 @@
   --font-script: "Pacifico", var(--font-sans);
   --spring: cubic-bezier(0.34, 1.56, 0.64, 1);
   --ease: cubic-bezier(0.2, 0.8, 0.2, 1);
-  --mx: 30vw;
-  --my: 12vh;
 }
 
 @media (prefers-color-scheme: dark) {
@@ -115,29 +116,6 @@
 html {
   -webkit-text-size-adjust: 100%;
   text-size-adjust: 100%;
-}
-
-html.light-idle {
-  animation: light-drift 18s ease-in-out infinite alternate;
-}
-
-@keyframes light-drift {
-  0% {
-    --mx: 18vw;
-    --my: 6vh;
-  }
-  35% {
-    --mx: 72vw;
-    --my: 22vh;
-  }
-  70% {
-    --mx: 48vw;
-    --my: 64vh;
-  }
-  100% {
-    --mx: 12vw;
-    --my: 80vh;
-  }
 }
 
 body {
@@ -227,6 +205,13 @@ ul {
   background-color: var(--glass-clear);
 }
 
+/* 高光畫在 ::before / ::after 上，光源位置要從卡片拿 */
+.glass::before,
+.glass::after {
+  --mx: inherit;
+  --my: inherit;
+}
+
 /* 邊緣高光：跟著光源跑的亮邊 + 上亮下暗的描邊 */
 .glass::before {
   content: "";
@@ -237,7 +222,7 @@ ul {
   padding: 1.5px;
   pointer-events: none;
   background:
-    radial-gradient(260px circle at var(--mx) var(--my), var(--rim), transparent 70%) fixed,
+    radial-gradient(260px circle at var(--mx) var(--my), var(--rim), transparent 70%),
     linear-gradient(160deg, var(--edge), var(--edge-dim) 38%, var(--edge-dim) 62%, var(--edge));
   -webkit-mask:
     linear-gradient(#000 0 0) content-box,
@@ -256,7 +241,7 @@ ul {
   z-index: -1;
   border-radius: inherit;
   pointer-events: none;
-  background: radial-gradient(520px circle at var(--mx) var(--my), var(--sheen), transparent 65%) fixed;
+  background: radial-gradient(520px circle at var(--mx) var(--my), var(--sheen), transparent 65%);
 }
 
 /* 邊緣折射（scripts/liquid.ts 依卡片尺寸產生濾鏡，產生好才會加上 data-refract-ready） */
@@ -296,6 +281,17 @@ ul {
   display: block;
 }
 
+/* 捲動中先用一般的毛玻璃，停下來再換回折射（見 scripts/liquid.ts）。
+   用 visibility 藏副本：display: none 會讓副本的漂移動畫重來，跟背景對不上 */
+.liquid--mirror.is-scrolling .glass[data-refract-ready] {
+  -webkit-backdrop-filter: blur(var(--blur)) saturate(180%);
+  backdrop-filter: blur(var(--blur)) saturate(180%);
+}
+
+.liquid--mirror.is-scrolling .glass[data-refract-ready] > .refract-mirror {
+  visibility: hidden;
+}
+
 /* 比卡片大一圈，模糊的邊緣會落在被裁掉的地方。折射在 SVG 裡做，這裡只負責模糊和飽和度 */
 .refract-mirror__box {
   position: absolute;
@@ -315,7 +311,8 @@ ul {
   /* 百分比以圖片自己的大小、中心點算，跟 .bg__img 一樣 */
   transform-box: fill-box;
   transform-origin: center;
-  animation: bg-drift 50s ease-in-out infinite alternate;
+  /* 跟 .bg__img 一樣一秒只動 3 次（見 components/Background.astro） */
+  animation: bg-drift 50s steps(150) infinite alternate;
 }
 
 /* 跟真正的背景一起淡入 */
@@ -463,10 +460,6 @@ button.tile:active {
 }
 
 @media (prefers-reduced-motion: reduce) {
-  html.light-idle {
-    animation: none;
-  }
-
   *,
   *::before,
   *::after {

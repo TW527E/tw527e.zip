@@ -20,6 +20,8 @@ const BAND = 34;
 const STRENGTH = 44;
 /** 背景副本比卡片多出來的範圍（px），要比模糊半徑大 */
 const MIRROR_MARGIN = 40;
+/** 停止捲動多久之後換回折射（ms） */
+const SCROLL_SETTLE = 150;
 
 type Mode = "backdrop" | "mirror";
 
@@ -256,8 +258,24 @@ export function initLiquid() {
   });
 
   if (mode === "mirror") {
-    // 卡片會跟著頁面捲動、背景不會，所以捲動時要重新對齊副本
-    window.addEventListener("scroll", () => schedule(targets), { passive: true });
+    // 卡片會跟著頁面捲動、背景不會，所以捲動後要重新對齊副本。
+    // 捲動中每一幀都重畫每張卡片的折射濾鏡會很卡（Safari 的 SVG 濾鏡很吃 CPU），
+    // 所以捲動時先換成一般的毛玻璃，停下來再對齊副本、換回折射。
+    const root = document.documentElement;
+    let settle = 0;
+    window.addEventListener(
+      "scroll",
+      () => {
+        if (!wanted.matches) return;
+        root.classList.add("is-scrolling");
+        clearTimeout(settle);
+        settle = window.setTimeout(() => {
+          for (const card of targets) update(card, mode);
+          root.classList.remove("is-scrolling");
+        }, SCROLL_SETTLE);
+      },
+      { passive: true },
+    );
     window.addEventListener("resize", () => schedule(targets), { passive: true });
     // 進場動畫會移動卡片，結束後再對齊一次
     targets.forEach((card) => card.addEventListener("animationend", () => schedule([card])));

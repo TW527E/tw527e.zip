@@ -42,8 +42,12 @@
     object-fit: cover;
     opacity: 0;
     transition: opacity 0.8s var(--ease);
-    /* 背景慢慢漂移，玻璃邊緣的折射才會跟著流動（keyframes 在 global.css） */
-    animation: bg-drift 50s ease-in-out infinite alternate;
+    /*
+     * 背景慢慢漂移，玻璃邊緣的折射才會跟著流動（keyframes 在 global.css）。
+     * 背景一動，上面每張玻璃卡片的模糊都要重算，所以一秒只動 3 次（50 秒 150 步），
+     * 每次移動不到 1px，看起來一樣順，但省下大部分的重算。背景副本也要用一樣的設定才會對齊。
+     */
+    animation: bg-drift 50s steps(150) infinite alternate;
     will-change: transform;
   }
 
