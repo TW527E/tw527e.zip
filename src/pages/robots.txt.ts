@@ -10,7 +10,7 @@ export const GET: APIRoute = () => {
     "Disallow: /api/",
     "",
     `Sitemap: ${new URL("/sitemap.xml", site.url).href}`,
-    `# 給 AI 看的網站簡介：${new URL("/llms.txt", site.url).href}`,
+    `# 給 AI 讀的網站介紹：${new URL("/llms.txt", site.url).href}`,
     "",
   ].join("\n");
   return new Response(text, { headers: { "Content-Type": "text/plain; charset=utf-8" } });

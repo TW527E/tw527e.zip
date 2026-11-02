@@ -10,33 +10,33 @@ import Icon from "./Icon.astro";
       <div class="guestbook__head">
         <h2 id="guestbook-title" class="panel-title">
           <Icon name="MessageCircle" />
-          留一句話
+          留句話給我
         </h2>
         <button type="button" class="guestbook__toggle" id="danmaku-toggle" aria-pressed="true" hidden>
           <Icon name="MessagesSquare" />
           <span>彈幕</span>
         </button>
       </div>
-      <p class="guestbook__hint">送出後會變成彈幕飄過整個畫面，最多 {MAX_LENGTH} 個字；署名會像名言一樣掛在右下角。</p>
+      <p class="guestbook__hint">留言會變成彈幕從畫面上飄過，最多 {MAX_LENGTH} 個字。有署名的話，會像名言一樣掛在右下角。</p>
 
       {/* 沒有 JS 不能留言，所以先停用，JS 載入後才打開 */}
       <form class="guestbook__form" id="guestbook-form" data-api={guestbook.api} data-sitekey={guestbook.turnstileSiteKey} novalidate>
         <fieldset disabled>
-          <label class="visually-hidden" for="guestbook-text">想說的話</label>
+          <label class="visually-hidden" for="guestbook-text">留言內容</label>
           <div class="guestbook__field tile">
             <input
               id="guestbook-text"
               name="text"
               type="text"
               maxlength={MAX_LENGTH * 2}
-              placeholder="想說什麼？"
+              placeholder="想跟我說什麼？"
               autocomplete="off"
               enterkeyhint="send"
               required
             />
             <span class="guestbook__count" id="guestbook-count" aria-hidden="true">0/{MAX_LENGTH}</span>
           </div>
-          <label class="visually-hidden" for="guestbook-name">署名（可以不填）</label>
+          <label class="visually-hidden" for="guestbook-name">署名（選填）</label>
           <div class="guestbook__field guestbook__field--name tile">
             <span class="guestbook__dash" aria-hidden="true">——</span>
             <input
@@ -44,7 +44,7 @@ import Icon from "./Icon.astro";
               name="name"
               type="text"
               maxlength={MAX_NAME_LENGTH * 2}
-              placeholder="署名（可以不填）"
+              placeholder="署名（選填）"
               autocomplete="nickname"
               enterkeyhint="send"
             />
@@ -57,7 +57,7 @@ import Icon from "./Icon.astro";
         {/* 需要點一下確認時，Turnstile 會出現在這裡；平常是空的 */}
         <div class="guestbook__captcha" id="guestbook-captcha"></div>
         <p class="guestbook__status" id="guestbook-status" role="status" aria-live="polite">
-          <noscript>要開啟 JavaScript 才能留言喔。</noscript>
+          <noscript>開啟 JavaScript 才能留言喔。</noscript>
         </p>
       </form>
     </section>

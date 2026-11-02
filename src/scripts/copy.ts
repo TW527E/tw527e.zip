@@ -26,7 +26,7 @@ const timers = new WeakMap<HTMLElement, number>();
 /** 複製按鈕按下後的回饋：圖示變勾勾、螢幕報讀器念出結果 */
 export function flashCopied(button: HTMLElement, ok: boolean, label: string) {
   const status = document.getElementById("copy-status");
-  if (status) status.textContent = ok ? `已複製 ${label}` : `複製失敗，請手動選取 ${label}`;
+  if (status) status.textContent = ok ? `已複製 ${label}` : `沒複製到，請自己選取 ${label}`;
   if (!ok) return;
   button.classList.add("is-done");
   clearTimeout(timers.get(button));

@@ -33,7 +33,7 @@ export interface Contact {
   evenOdd?: boolean;
 }
 
-// 「找我聊天」聯絡卡，第一個是預設顯示的
+// 「聯絡我」切換卡，第一個是預設顯示的
 export const contacts: Contact[] = [
   {
     name: "Email",
@@ -63,8 +63,8 @@ export interface NavLink {
   icon: "BookOpen" | "Activity" | "Globe" | "Camera" | "Music";
 }
 
-// 「我的其他地方」：想加頁面就往下加一筆
+// 「其他地方逛逛」：想加頁面就往下加一筆
 export const navLinks: NavLink[] = [
-  { name: "部落格", description: "想到什麼就寫什麼的地方", url: "https://blog.tw527e.zip/", icon: "BookOpen" },
-  { name: "網站狀態", description: "看看我的服務今天有沒有在偷懶", url: "https://status.tw527e.zip/", icon: "Activity" },
+  { name: "部落格", description: "想寫什麼就寫什麼", url: "https://blog.tw527e.zip/", icon: "BookOpen" },
+  { name: "網站狀態", description: "我的服務有沒有掛掉，來這裡看", url: "https://status.tw527e.zip/", icon: "Activity" },
 ];

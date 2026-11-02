@@ -1,4 +1,4 @@
-// 留言板：留一句話，送出前才載入 Turnstile 人機驗證（不拖慢首頁載入），成功後變成彈幕。
+// 留言板：留句話給我，送出前才載入 Turnstile 人機驗證（不拖慢首頁載入），成功後變成彈幕。
 import { MAX_LENGTH, normalize, reject, rejectName } from "../../worker/filter";
 
 const NAME_KEY = "guestbook-name";
@@ -110,10 +110,10 @@ export function initGuestbook() {
 
     busy = true;
     send.disabled = true;
-    show("確認你不是機器人…");
+    show("先確認一下你不是機器人…");
     try {
       const token = await getToken(captcha, sitekey).catch(() => {
-        throw new Error("人機驗證沒通過，再試一次");
+        throw new Error("驗證沒過，再試一次看看");
       });
       show("送出中…");
       const res = await fetch(api, {
@@ -121,14 +121,14 @@ export function initGuestbook() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ text, name, token }),
       }).catch(() => {
-        throw new Error("連不上伺服器，等一下再試");
+        throw new Error("伺服器連不上，晚點再試");
       });
       const data = (await res.json().catch(() => ({}))) as {
         ok?: boolean;
         error?: string;
         message?: { text: string; name: string };
       };
-      if (!res.ok || !data.ok) throw new Error(data.error ?? "送不出去，等一下再試");
+      if (!res.ok || !data.ok) throw new Error(data.error ?? "沒送出去，晚點再試");
 
       input.value = "";
       updateCount();
@@ -137,10 +137,10 @@ export function initGuestbook() {
       } catch {
         // 存不了也沒關係
       }
-      show("收到了！看看背景～", "ok");
+      show("收到！往背景看看～", "ok");
       document.dispatchEvent(new CustomEvent("danmaku:add", { detail: { text: data.message?.text ?? text, name: data.message?.name ?? name } }));
     } catch (err) {
-      show(err instanceof Error ? err.message : "送不出去，等一下再試", "error");
+      show(err instanceof Error ? err.message : "沒送出去，晚點再試", "error");
     } finally {
       busy = false;
       send.disabled = false;

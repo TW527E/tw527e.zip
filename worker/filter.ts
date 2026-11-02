@@ -30,24 +30,24 @@ export function normalize(input: unknown): string {
 
 /** 連結、髒話、廣告詞的共同檢查 */
 function unfriendly(text: string, what: string): string | null {
-  if (LINK.test(text)) return `${what}不能放連結喔`;
+  if (LINK.test(text)) return `${what}裡不能放連結喔`;
   // 比對時才把全形英數轉成半形（ｆｕｃｋ → fuck），存下來的字保持原樣，中文標點才不會被改掉
   const squashed = text.normalize("NFKC").toLowerCase().replace(/[\s\p{P}\p{S}]/gu, "");
-  if (BLOCKED.some((word) => squashed.includes(word))) return `這${what === "署名" ? "個署名" : "句話"}好像不太友善，換個說法吧`;
+  if (BLOCKED.some((word) => squashed.includes(word))) return `這${what === "署名" ? "個署名" : "句話"}有點不友善，換個說法吧`;
   return null;
 }
 
 /** 回傳這句話不能留的原因，沒問題回傳 null */
 export function reject(text: string): string | null {
   const length = Array.from(text).length;
-  if (length === 0) return "寫點什麼再送出吧";
-  if (length > MAX_LENGTH) return `最多 ${MAX_LENGTH} 個字喔`;
+  if (length === 0) return "還沒寫東西喔";
+  if (length > MAX_LENGTH) return `太長了，最多 ${MAX_LENGTH} 個字`;
   return unfriendly(text, "彈幕");
 }
 
 /** 署名可以不填；有填的話回傳不能用的原因，沒問題回傳 null */
 export function rejectName(name: string): string | null {
   if (name === "") return null;
-  if (Array.from(name).length > MAX_NAME_LENGTH) return `署名最多 ${MAX_NAME_LENGTH} 個字喔`;
+  if (Array.from(name).length > MAX_NAME_LENGTH) return `署名最多只能 ${MAX_NAME_LENGTH} 個字`;
   return unfriendly(name, "署名");
 }

@@ -21,7 +21,7 @@ import CopyButton from "./CopyButton.astro";
     {site.tags.map((tag) => <li class="tile" data-cursor>{tag}</li>)}
   </ul>
 
-  <ul class="social" aria-label="在其他地方找到我">
+  <ul class="social" aria-label="我的社群帳號">
     {
       socialLinks.map((link) => (
         <li>
@@ -34,7 +34,7 @@ import CopyButton from "./CopyButton.astro";
   </ul>
 
   <!-- 沒有 JS 時四個聯絡方式直接列出來；有 JS 才變成切換卡 -->
-  <div class="contact tile" id="contact" role="group" aria-label="找我聊天">
+  <div class="contact tile" id="contact" role="group" aria-label="聯絡我">
     <div class="contact__tabs">
       {
         contacts.map((c, i) => (

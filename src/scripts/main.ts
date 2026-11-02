@@ -25,4 +25,4 @@ console.log(
   "background:#9c3f14;color:#fff;padding:4px 6px;border-radius:6px 0 0 6px",
   "background:#14161c;color:#fff;padding:4px 6px;border-radius:0 6px 6px 0",
 );
-console.log(`嗨～想看這個網站怎麼做的話，原始碼在這：${site.repo}`);
+console.log(`嗨～好奇這個網站怎麼做的？原始碼在這：${site.repo}`);

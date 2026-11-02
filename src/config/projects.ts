@@ -19,26 +19,26 @@ export interface Project {
   icon?: keyof typeof icons;
 }
 
-// 首頁「做過的東西」：挑幾個想給人看的就好，建議 4–6 個
+// 首頁「我做的小東西」：挑幾個想給人看的就好，建議 4–6 個
 export const projects: Project[] = [
   {
     name: "renexmoe TW527E Edition",
-    description: "幫 OneManager 換上好看的外皮，拿來當網盤門面剛剛好。",
+    description: "給 OneManager 用的主題，讓網盤的首頁好看一點。",
     url: "https://github.com/TW527E/renexmoe-tw527e-edition",
     language: "HTML",
-    badge: "最多人收藏",
+    badge: "收藏最多",
     logo: renexmoe,
   },
   {
     name: "ShiftIME",
-    description: "在 Mac 上單按 Shift 就能切中英文，跟 Windows 一樣順手。",
+    description: "讓 Mac 也能像 Windows 一樣，按一下 Shift 就切換中英文。",
     url: "https://github.com/TW527E/ShiftIME",
     language: "Swift",
     logo: shiftime,
   },
   {
     name: "Wherry",
-    description: "在 X 發完文，自動幫你同步到 Bluesky、Sharkey 和 Telegram。",
+    description: "在 X 發的文，會自動轉貼到 Bluesky、Sharkey 和 Telegram。",
     url: "https://github.com/TW527E/Wherry",
     language: "TypeScript",
     logo: wherry,
@@ -46,21 +46,21 @@ export const projects: Project[] = [
   },
   {
     name: "Rebocap × VRChat on Linux",
-    description: "在 Linux 上用 Rebocap 全身追蹤玩 VRChat，踩過的坑和腳本都在這。",
+    description: "在 Linux 上靠 Rebocap 全身追蹤玩 VRChat，用到的腳本和踩過的坑都放在這。",
     url: "https://github.com/TW527E/rebocap-linux-vrchat-fbt",
     language: "Shell",
     icon: "PersonStanding",
   },
   {
     name: "Bilibili YouTube Volume",
-    description: "把 YouTube 那種好調的音量條搬到 B 站，晚上看片不怕突然爆音。",
+    description: "把 B 站的音量條換成 YouTube 那種比較好調的，半夜看影片不會突然被嚇到。",
     url: "https://github.com/TW527E/bilibili-youtube-volume",
     language: "JavaScript",
     icon: "Volume2",
   },
   {
     name: "Bahamut Auto Bump",
-    description: "每天幫巴哈的文章推一下，推完還會傳 Telegram 跟你說一聲。",
+    description: "每天自動幫你推巴哈的文章，推完會傳 Telegram 通知你。",
     url: "https://github.com/TW527E/Bahamut-Auto-Bump",
     language: "Python",
     icon: "ThumbsUp",
