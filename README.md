@@ -42,15 +42,21 @@ pnpm dev:api      # 連留言 API 一起跑（要先 pnpm build），http://loca
 
 背景圖放在 `public/bg/`，每張要標記 `tone`（`light` 或 `dark`），淺色主題會優先挑亮的圖、深色主題挑暗的圖。想讓某張圖只在手機版面（959px 以下）或電腦版面出現，再加上 `device: "mobile"` 或 `device: "desktop"`；不加就兩邊都會出現。想讓某張比較常出現，加上 `weight`（預設 1，2 就是兩倍機會，0 是不會被隨機挑到）。
 
-## 玻璃邊緣的折射
+## 玻璃效果
 
-桌機寬度（960px 以上）時，卡片邊緣會把背景往內折，像透過厚玻璃在看（`src/scripts/liquid.ts`）。
+卡片是液態玻璃：中間是模糊的背景，邊緣會把背景往內折，像透過厚玻璃在看。
 
-- 位移貼圖是 `public/glass/` 裡事先做好的碎片（四個圓角 + 四條邊），依卡片尺寸拼起來。想改圓角或折射帶寬度，改 `scripts/make-glass-maps.mjs` 的設定後執行 `node scripts/make-glass-maps.mjs` 重新產生，再把 `liquid.ts` 裡對應的常數一起改掉。
-- Chrome、Edge、Vivaldi 等 Chromium 瀏覽器直接用 `backdrop-filter` 套 SVG 濾鏡。
-- Safari、Firefox 的 `backdrop-filter` 不支援 SVG 濾鏡，所以改在卡片裡放一份對齊畫面的背景副本（畫在 `<svg>` 裡），對副本做折射和模糊。
-- 手機、或系統開了「減少透明度」時不做折射，只留一般的毛玻璃。
-- 捲動或移動滑鼠時一直掉幀的裝置，會自動降級（`src/scripts/perf.ts`）：WebGL 版先改成捲動時邊緣折射淡出，還是不行才換成輕量模式（不做折射，只留一般的毛玻璃）。每一級都會記住 5 個小時。頁尾的「輕量模式」按鈕可以自己切換，自己選過就照選的，不再自動偵測。
+- 支援 WebGL 的瀏覽器（手機也是）用 WebGL 畫（`src/scripts/liquid-gl.ts`），分兩層：
+  - 霧面：事先模糊好的背景圖，固定在畫面上、裁成卡片的形狀，捲動時瀏覽器自己會對齊。
+  - 邊緣：每張卡片一個畫布，只畫邊緣那一圈的折射、色散和高光。折射的強度、寬度等設定是檔案開頭的常數。
+- 手機、Safari 和掉幀的電腦，捲動時邊緣那層先淡出，停下來再畫回來：捲動是另一條執行緒在跑，畫布會跟不上。
+- 不支援 WebGL 的話改用 SVG 濾鏡（`src/scripts/liquid.ts`），只在桌機寬度（960px 以上）做：
+  - 位移貼圖是 `public/glass/` 裡事先做好的碎片（四個圓角 + 四條邊），依卡片尺寸拼起來。想改圓角或折射帶寬度，改 `scripts/make-glass-maps.mjs` 的設定後執行 `node scripts/make-glass-maps.mjs` 重新產生，再把 `liquid.ts` 裡對應的常數一起改掉。
+  - Chrome、Edge、Vivaldi 等 Chromium 瀏覽器直接用 `backdrop-filter` 套 SVG 濾鏡。
+  - Safari、Firefox 的 `backdrop-filter` 不支援 SVG 濾鏡，所以改在卡片裡放一份對齊畫面的背景副本（畫在 `<svg>` 裡），對副本做折射和模糊。
+- 系統開了「減少透明度」時不做折射，只留一般的毛玻璃。
+- 拉過頁面頭尾的回彈是自己做的（`src/scripts/overscroll.ts`），瀏覽器原生的回彈關掉了：原生回彈的時候，玻璃和游標會對不上。
+- 捲動或移動滑鼠時一直掉幀的裝置，會自動降級（`src/scripts/perf.ts`）：WebGL 版先改成捲動時邊緣淡出，還是不行才換成輕量模式（不做折射，只留一般的毛玻璃）。每一級都會記住 5 個小時。頁尾的羽毛按鈕可以自己切換輕量模式，自己選過就照選的，不再自動偵測。
 
 ## 部署到 Cloudflare Workers
 
