@@ -31,6 +31,8 @@ const SATURATE = 1.8;
 const MAX_DPR = 2;
 /** 手機停止捲動多久之後，邊緣那層淡回來（ms） */
 const SCROLL_IDLE = 140;
+/** 觸控板拉過頁面頭尾之後，等多久（彈回去）邊緣那層才淡回來（ms） */
+const OVERSCROLL_IDLE = 700;
 
 type RGBA = [number, number, number, number];
 
@@ -473,6 +475,11 @@ function syncDrift(img: HTMLImageElement) {
   if (source && copy) copy.currentTime = source.currentTime;
 }
 
+function isChromium(): boolean {
+  const brands = (navigator as Navigator & { userAgentData?: { brands: { brand: string }[] } }).userAgentData?.brands;
+  return !!brands?.some((b) => b.brand === "Chromium");
+}
+
 /** 這台裝置能不能用 WebGL */
 export function glSupported() {
   try {
@@ -603,21 +610,35 @@ export function initGlass(targets: HTMLElement[], wanted: { readonly matches: bo
     };
   };
 
-  // 手機捲動是另一條執行緒在跑，畫布再快也會晚好幾幀，邊緣的折射會很明顯跟不上：
-  // 捲動的時候先把邊緣那層淡出（只剩對齊的霧面），停下來再畫好、淡回來。
-  // 電腦平常捲動時一直重畫；掉幀的話也換成這樣（scripts/perf.ts 加上 .fade-rim）
+  // 捲動是另一條執行緒在跑，畫布最快也晚一幀；手機、Safari 的平滑捲動會晚更多（還會忽快忽慢），
+  // 邊緣的折射會很明顯跟不上。這些時候捲動中先把邊緣那層淡出（只剩對齊的霧面），停下來再畫好、淡回來。
+  // 只有電腦上的 Chrome 捲動時一直重畫；掉幀的話也換成淡出（scripts/perf.ts 加上 .fade-rim）
+  const root = document.documentElement;
   const touch = window.matchMedia("(pointer: coarse)");
+  const chromium = isChromium();
   let scrolling = 0;
+  const hideRim = (ms: number) => {
+    clearTimeout(scrolling);
+    root.classList.add("is-scrolling");
+    scrolling = window.setTimeout(() => {
+      scrolling = 0;
+      root.classList.remove("is-scrolling");
+    }, ms);
+  };
   window.addEventListener(
     "scroll",
     () => {
-      if (!touch.matches && !document.documentElement.classList.contains("fade-rim")) return;
-      clearTimeout(scrolling);
-      document.documentElement.classList.add("is-scrolling");
-      scrolling = window.setTimeout(() => {
-        scrolling = 0;
-        document.documentElement.classList.remove("is-scrolling");
-      }, SCROLL_IDLE);
+      if (touch.matches || !chromium || root.classList.contains("fade-rim")) hideRim(SCROLL_IDLE);
+    },
+    { passive: true },
+  );
+  // 觸控板可以拉過頁面的頭尾（彈一下），這時候頁面的捲動位置不會變、也沒有捲動事件，
+  // 只有滾輪事件：拉過頭的時候也淡出，等彈回去再回來
+  window.addEventListener(
+    "wheel",
+    (e) => {
+      const max = root.scrollHeight - window.innerHeight;
+      if ((e.deltaY < 0 && window.scrollY <= 0) || (e.deltaY > 0 && window.scrollY >= max - 1)) hideRim(OVERSCROLL_IDLE);
     },
     { passive: true },
   );
