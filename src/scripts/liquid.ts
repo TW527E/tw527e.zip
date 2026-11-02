@@ -11,6 +11,8 @@
 //   座標是從頁面左上角算、feImage 的圖片也不會畫出來，套在 SVG 元素上就正常。
 //   副本比卡片大一圈，模糊的邊緣落在裁掉的地方。
 
+import { isLite } from "./perf";
+
 const SVG_NS = "http://www.w3.org/2000/svg";
 /** 碎片的圓角種類，要跟 scripts/make-glass-maps.mjs 一致 */
 const RADII = [28, 32];
@@ -20,8 +22,8 @@ const BAND = 34;
 const STRENGTH = 44;
 /** 背景副本比卡片多出來的範圍（px），要比模糊半徑大 */
 const MIRROR_MARGIN = 40;
-/** 停止捲動多久之後換回折射（ms） */
-const SCROLL_SETTLE = 150;
+/** 換成輕量模式時，折射淡出要多久（ms），要跟 global.css 的 .lite 一致 */
+const LITE_FADE = 600;
 
 type Mode = "backdrop" | "mirror";
 
@@ -235,7 +237,7 @@ export function initLiquid() {
   // 減少透明度要分開查：Safari 不認得這個查詢，寫成 "no-preference" 會永遠不成立。
   const wide = window.matchMedia("(min-width: 960px)");
   const reduce = window.matchMedia("(prefers-reduced-transparency: reduce)");
-  const wanted = { get matches() { return wide.matches && !reduce.matches; } };
+  const wanted = { get matches() { return wide.matches && !reduce.matches && !isLite(); } };
   const targets = [...document.querySelectorAll<HTMLElement>("[data-refract]")];
   if (targets.length === 0) return;
 
@@ -258,24 +260,9 @@ export function initLiquid() {
   });
 
   if (mode === "mirror") {
-    // 卡片會跟著頁面捲動、背景不會，所以捲動後要重新對齊副本。
-    // 捲動中每一幀都重畫每張卡片的折射濾鏡會很卡（Safari 的 SVG 濾鏡很吃 CPU），
-    // 所以捲動時先換成一般的毛玻璃，停下來再對齊副本、換回折射。
-    const root = document.documentElement;
-    let settle = 0;
-    window.addEventListener(
-      "scroll",
-      () => {
-        if (!wanted.matches) return;
-        root.classList.add("is-scrolling");
-        clearTimeout(settle);
-        settle = window.setTimeout(() => {
-          for (const card of targets) update(card, mode);
-          root.classList.remove("is-scrolling");
-        }, SCROLL_SETTLE);
-      },
-      { passive: true },
-    );
+    // 卡片會跟著頁面捲動、背景不會，所以捲動時要重新對齊副本。
+    // 跑不動的裝置會換成輕量模式（scripts/perf.ts），不做折射，也就不用對齊了。
+    window.addEventListener("scroll", () => schedule(targets), { passive: true });
     window.addEventListener("resize", () => schedule(targets), { passive: true });
     // 進場動畫會移動卡片，結束後再對齊一次
     targets.forEach((card) => card.addEventListener("animationend", () => schedule([card])));
@@ -297,5 +284,7 @@ export function initLiquid() {
   };
   wide.addEventListener("change", apply);
   reduce.addEventListener("change", apply);
+  // 換成輕量模式：等折射淡出之後再拆掉
+  document.addEventListener("perf:lite", () => setTimeout(apply, LITE_FADE));
   apply();
 }

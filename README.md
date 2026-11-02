@@ -48,8 +48,9 @@ pnpm dev:api      # 連留言 API 一起跑（要先 pnpm build），http://loca
 
 - 位移貼圖是 `public/glass/` 裡事先做好的碎片（四個圓角 + 四條邊），依卡片尺寸拼起來。想改圓角或折射帶寬度，改 `scripts/make-glass-maps.mjs` 的設定後執行 `node scripts/make-glass-maps.mjs` 重新產生，再把 `liquid.ts` 裡對應的常數一起改掉。
 - Chrome、Edge、Vivaldi 等 Chromium 瀏覽器直接用 `backdrop-filter` 套 SVG 濾鏡。
-- Safari、Firefox 的 `backdrop-filter` 不支援 SVG 濾鏡，所以改在卡片裡放一份對齊畫面的背景副本（畫在 `<svg>` 裡），對副本做折射和模糊。捲動中會先換成一般的毛玻璃，停下來才換回折射，不然每一幀都要重畫濾鏡，會很卡。
+- Safari、Firefox 的 `backdrop-filter` 不支援 SVG 濾鏡，所以改在卡片裡放一份對齊畫面的背景副本（畫在 `<svg>` 裡），對副本做折射和模糊。
 - 手機、或系統開了「減少透明度」時不做折射，只留一般的毛玻璃。
+- 捲動或移動滑鼠時一直掉幀的裝置，會自動換成輕量模式（`src/scripts/perf.ts`）：不做折射，只留一般的毛玻璃。只換一次，也會記住 14 天。
 
 ## 部署到 Cloudflare Workers
 

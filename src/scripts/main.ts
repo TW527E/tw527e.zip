@@ -5,8 +5,11 @@ import { initCursor } from "./cursor";
 import { initDanmaku } from "./danmaku";
 import { initGuestbook } from "./guestbook";
 import { initLiquid } from "./liquid";
+import { initPerf } from "./perf";
 import { initPointerLight } from "./pointer-light";
 
+// 要在 initLiquid 之前：記得是輕量模式的話，一開始就不做折射
+initPerf();
 initLiquid();
 initPointerLight();
 initCursor();

@@ -134,6 +134,8 @@ export function initCursor() {
   };
 
   let hovered: HTMLElement | null = null;
+  /** 每個東西的圓角查一次就記住：吸附那一瞬間少做一點事 */
+  const radii = new WeakMap<HTMLElement, number>();
   const pick = (el: Element | null) => {
     const hit = el?.closest<HTMLElement>(INTERACTIVE) ?? null;
     // 沒吸附在東西上時，每次移動都要看看底下是不是文字
@@ -150,7 +152,12 @@ export function initCursor() {
     target = hit;
     pad = wide ? PAD_WIDE : PAD;
     // 文字連結沒有圓角，給一點圓角比較像 iPad
-    radius = Math.max(parseFloat(getComputedStyle(hit).borderTopLeftRadius) || 0, 8);
+    let r = radii.get(hit);
+    if (r === undefined) {
+      r = Math.max(parseFloat(getComputedStyle(hit).borderTopLeftRadius) || 0, 8);
+      radii.set(hit, r);
+    }
+    radius = r;
     ring.classList.add("is-snapped");
     ring.classList.toggle("is-wide", wide);
   };
