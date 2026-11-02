@@ -23,3 +23,7 @@
 # 給 AI 看的網站簡介是中文，明確標成 UTF-8 才不會變亂碼
 /llms.txt
   Content-Type: text/plain; charset=utf-8
+
+# 拆掉舊主頁 Service Worker 用的（見 sw.js），不能被快取，瀏覽器才拿得到這份
+/sw.js
+  Cache-Control: no-cache
