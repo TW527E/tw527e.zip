@@ -280,6 +280,49 @@ ul {
   height: 100%;
 }
 
+/* 霧面那層要固定在畫面上（position: fixed），所以這層不能有 transform；形狀用 clip-path 裁 */
+.liquid--gl .refract-mirror {
+  will-change: auto;
+}
+
+/* 事先模糊好的背景，位置、大小、漂移都跟 .bg 一樣（components/Background.astro） */
+.refract-frost {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 100vh;
+  height: 100lvh;
+  overflow: hidden;
+}
+
+.refract-frost__img {
+  position: absolute;
+  inset: -4%;
+  width: 108%;
+  height: 108%;
+  object-fit: cover;
+  opacity: 0;
+  transition: opacity 0.8s var(--ease);
+  animation: bg-drift 50s steps(150) infinite alternate;
+  will-change: transform;
+}
+
+.refract-frost__img.is-loaded {
+  opacity: 1;
+}
+
+.refract-frost__scrim {
+  position: absolute;
+  inset: 0;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .refract-frost__img {
+    animation: none;
+  }
+}
+
 .refract-mirror {
   display: none;
   position: absolute;

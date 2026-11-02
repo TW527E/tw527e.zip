@@ -71,11 +71,23 @@ export function initCursor() {
     };
   };
 
+  /** 沒吸附、形狀也變回來了：位置直接跟著滑鼠，不要慢慢追（慢慢追會覺得游標有延遲，Safari 特別明顯） */
+  const following = () => !target && Math.abs(cur.w - (beam ? BEAM : DOT)) < 0.5 && Math.abs(cur.h - (beam ? beam.h : DOT)) < 0.5;
+  const place = () => {
+    // 縮放要放在位移後面，才會以游標自己為中心縮小，不會被拉往畫面左上角
+    ring.style.transform = `translate3d(${cur.x - cur.w / 2}px, ${cur.y - cur.h / 2}px, 0) scale(${cur.s})`;
+  };
+
   /** 停下來之後畫過最後一次了沒 */
   let drawn = false;
   const tick = () => {
     const g = goal();
     let moving = false;
+    if (following()) {
+      cur.x = g.x;
+      // 文字游標換行的時候還是滑過去
+      if (!beam) cur.y = g.y;
+    }
     for (const k of ["x", "y", "w", "h", "r", "s"] as const) {
       const d = g[k] - cur[k];
       if (Math.abs(d) > (k === "s" ? 0.001 : 0.1)) {
@@ -92,8 +104,7 @@ export function initCursor() {
       ring.style.width = `${cur.w}px`;
       ring.style.height = `${cur.h}px`;
       ring.style.borderRadius = `${cur.r}px`;
-      // 縮放要放在位移後面，才會以游標自己為中心縮小，不會被拉往畫面左上角
-      ring.style.transform = `translate3d(${cur.x - cur.w / 2}px, ${cur.y - cur.h / 2}px, 0) scale(${cur.s})`;
+      place();
     }
     // 吸附中的按鈕本身也可能在動（hover 彈跳），所以吸附時持續更新
     raf = moving || target ? requestAnimationFrame(tick) : 0;
@@ -175,6 +186,12 @@ export function initCursor() {
       px = e.clientX;
       py = e.clientY;
       pick(e.target instanceof Element ? e.target : null);
+      // 跟著滑鼠的時候馬上移過去，不等下一幀：Safari 的滑鼠事件常常在這一幀畫完之後才來
+      if (following()) {
+        cur.x = px;
+        if (!beam) cur.y = py;
+        place();
+      }
       kick();
     },
     { passive: true },

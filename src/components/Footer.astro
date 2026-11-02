@@ -13,6 +13,11 @@ const years = year > startYear ? `${startYear}–${year}` : `${startYear}`;
     <a href={site.repo} target="_blank" rel="noopener noreferrer">原始碼</a>
     <span aria-hidden="true">·</span>
     <span data-cursor>v{__APP_VERSION__}</span>
+    <span aria-hidden="true">·</span>
+    <!-- 跑不動會自動換成輕量模式（scripts/perf.ts），被誤判或想省電時可以自己切換 -->
+    <button class="footer__lite" type="button" data-lite-toggle aria-pressed="false" title="不做玻璃折射，比較省電">
+      輕量模式：<span data-lite-state>關</span>
+    </button>
   </p>
 </footer>
 
@@ -37,6 +42,17 @@ const years = year > startYear ? `${startYear}–${year}` : `${startYear}`;
   .footer__pill a {
     text-decoration: underline;
     text-underline-offset: 3px;
+  }
+
+  .footer__lite {
+    padding: 0;
+    border: 0;
+    background: none;
+    color: inherit;
+    font: inherit;
+    text-decoration: underline;
+    text-underline-offset: 3px;
+    cursor: pointer;
   }
 
   @media (max-width: 959px) {

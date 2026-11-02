@@ -353,20 +353,23 @@ export function initLiquid() {
   reduce.addEventListener("change", apply);
   // 換成輕量模式：等折射淡出之後再拆掉
   document.addEventListener("perf:lite", () => setTimeout(apply, LITE_FADE));
+  // 在頁尾關掉輕量模式：馬上換回來
+  document.addEventListener("perf:full", apply);
   apply();
 }
 
 /** 實驗：WebGL 版（scripts/liquid-gl.ts） */
 function initLiquidGl() {
   document.documentElement.classList.add("liquid", "liquid--gl");
-  const wide = window.matchMedia("(min-width: 960px)");
+  // WebGL 版很省，手機也開
   const reduce = window.matchMedia("(prefers-reduced-transparency: reduce)");
-  const wanted = { get matches() { return wide.matches && !reduce.matches && !isLite(); } };
+  const wanted = { get matches() { return !reduce.matches && !isLite(); } };
   const targets = [...document.querySelectorAll<HTMLElement>("[data-refract]")];
   const apply = initGlass(targets, wanted);
   if (!apply) return;
-  wide.addEventListener("change", apply);
   reduce.addEventListener("change", apply);
   document.addEventListener("perf:lite", () => setTimeout(apply, LITE_FADE));
+  // 在頁尾關掉輕量模式：馬上換回來
+  document.addEventListener("perf:full", apply);
   apply();
 }
