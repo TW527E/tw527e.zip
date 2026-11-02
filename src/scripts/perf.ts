@@ -1,11 +1,14 @@
 // 看這台裝置跑不跑得動完整的玻璃效果。
 //
-// 預設全部開。捲動或移動滑鼠時如果一直掉幀，就換成輕量模式（<html class="lite">）：
-// 不做邊緣折射，只留一般的毛玻璃。只會換一次（折射淡出），也會記住幾個小時，
-// 這段時間打開直接用輕量模式，不會在完整和輕量之間換來換去。
+// 預設全部開。捲動或移動滑鼠時如果一直掉幀，就降一級，最多降兩次：
+// 1. 捲動的時候先把邊緣折射淡出（<html class="fade-rim">，跟手機一樣，scripts/liquid-gl.ts）。
+//    只有 WebGL 版有這一級，其他做法直接跳到下一級。
+// 2. 輕量模式（<html class="lite">）：不做邊緣折射，只留一般的毛玻璃。
+// 每一級都會記住幾個小時，這段時間打開直接用那一級，不會換來換去。
 // 頁尾的按鈕可以自己切換；自己選過就照選的，不再自動偵測。
 
 const KEY = "perf-lite";
+const FADE_KEY = "perf-fade";
 /** 自己選的模式（"lite" / "full"） */
 const CHOICE_KEY = "perf-mode";
 /** 自動換成輕量模式之後記住多久，之後重新測一次（可能只是當時剛好很忙） */
@@ -34,24 +37,34 @@ function choice(): string | null {
   }
 }
 
-function remembered(): boolean {
+function remembered(key: string): boolean {
   try {
-    const at = Number(localStorage.getItem(KEY));
+    const at = Number(localStorage.getItem(key));
     if (at && Date.now() - at < REMEMBER_HOURS * 3_600_000) return true;
-    localStorage.removeItem(KEY);
+    localStorage.removeItem(key);
   } catch {
     // 無痕模式或封鎖了網站資料：每次重新測就好
   }
   return false;
 }
 
-function goLite() {
-  root.classList.add("lite");
+function remember(key: string) {
   try {
-    localStorage.setItem(KEY, String(Date.now()));
+    localStorage.setItem(key, String(Date.now()));
   } catch {
     // 同上
   }
+}
+
+/** 降一級 */
+function slowDown() {
+  if (root.classList.contains("liquid--gl") && !root.classList.contains("fade-rim")) {
+    root.classList.add("fade-rim");
+    remember(FADE_KEY);
+    return;
+  }
+  root.classList.add("lite");
+  remember(KEY);
   document.dispatchEvent(new CustomEvent("perf:lite"));
 }
 
@@ -60,9 +73,12 @@ export function setLite(on: boolean) {
   try {
     localStorage.setItem(CHOICE_KEY, on ? "lite" : "full");
     localStorage.removeItem(KEY);
+    localStorage.removeItem(FADE_KEY);
   } catch {
     // 同上：這次切換還是有效，只是不會記住
   }
+  // 自己選完整就是最好的那一級
+  root.classList.remove("fade-rim");
   if (on === isLite()) return;
   root.classList.toggle("lite", on);
   document.dispatchEvent(new CustomEvent(on ? "perf:lite" : "perf:full"));
@@ -70,8 +86,10 @@ export function setLite(on: boolean) {
 
 export function initPerf() {
   const chosen = choice();
-  if (chosen === "lite" || (!chosen && remembered())) {
+  if (chosen === "lite" || (!chosen && remembered(KEY))) {
     root.classList.add("lite");
+  } else if (!chosen && remembered(FADE_KEY)) {
+    root.classList.add("fade-rim");
   }
   initToggle();
   if (chosen || isLite()) return;
@@ -95,7 +113,12 @@ export function initPerf() {
         const share = frames.filter((x) => x > limit).length / frames.length;
         frames = [];
         strikes = share > SLOW_SHARE ? strikes + 1 : 0;
-        if (strikes >= STRIKES) return goLite();
+        if (strikes >= STRIKES) {
+          // 降一級之後重新量，還是不行再降
+          strikes = 0;
+          slowDown();
+          if (isLite()) return;
+        }
       }
     }
     if (performance.now() - active < ACTIVE_MS) {
@@ -126,10 +149,9 @@ export function initPerf() {
 function initToggle() {
   const button = document.querySelector<HTMLButtonElement>("[data-lite-toggle]");
   if (!button) return;
-  const label = button.querySelector("[data-lite-state]");
   const sync = () => {
     button.setAttribute("aria-pressed", String(isLite()));
-    if (label) label.textContent = isLite() ? "開" : "關";
+    button.title = `輕量模式：${isLite() ? "開" : "關"}`;
   };
   button.addEventListener("click", () => {
     setLite(!isLite());

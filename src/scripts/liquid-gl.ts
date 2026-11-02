@@ -29,6 +29,8 @@ const IOR = 1.5;
 const SATURATE = 1.8;
 /** 畫布最多用幾倍解析度 */
 const MAX_DPR = 2;
+/** 手機停止捲動多久之後，邊緣那層淡回來（ms） */
+const SCROLL_IDLE = 140;
 
 type RGBA = [number, number, number, number];
 
@@ -307,6 +309,8 @@ class Pane {
   private sourceKey = "";
   private drawn = "";
   private colorKey = "";
+  /** 霧面那層還沒對齊，整張都用 WebGL 畫 */
+  opaque = true;
   lost = false;
 
   constructor(
@@ -403,6 +407,8 @@ class Pane {
     // 進場動畫（transform）的時候，fixed 會對著卡片而不是畫面，霧面那層會歪掉：先整張用 WebGL 畫
     const opaque = !scene.source || !this.frostReady(scene.source, blurPx) || fixedBroken(this.card);
     this.frost.style.visibility = opaque ? "hidden" : "";
+    this.opaque = opaque;
+    this.box.toggleAttribute("data-opaque", opaque);
 
     const gl = this.gl;
     const dpr = Math.min(window.devicePixelRatio || 1, MAX_DPR);
@@ -597,11 +603,35 @@ export function initGlass(targets: HTMLElement[], wanted: { readonly matches: bo
     };
   };
 
+  // 手機捲動是另一條執行緒在跑，畫布再快也會晚好幾幀，邊緣的折射會很明顯跟不上：
+  // 捲動的時候先把邊緣那層淡出（只剩對齊的霧面），停下來再畫好、淡回來。
+  // 電腦平常捲動時一直重畫；掉幀的話也換成這樣（scripts/perf.ts 加上 .fade-rim）
+  const touch = window.matchMedia("(pointer: coarse)");
+  let scrolling = 0;
+  window.addEventListener(
+    "scroll",
+    () => {
+      if (!touch.matches && !document.documentElement.classList.contains("fade-rim")) return;
+      clearTimeout(scrolling);
+      document.documentElement.classList.add("is-scrolling");
+      scrolling = window.setTimeout(() => {
+        scrolling = 0;
+        document.documentElement.classList.remove("is-scrolling");
+      }, SCROLL_IDLE);
+    },
+    { passive: true },
+  );
+
   const frame = () => {
     raf = 0;
     if (!wanted.matches) return;
     const scene = readScene();
-    if (scene) for (const [card, pane] of panes) pane.draw(scene, blurOf.get(card) ?? 0, radiusOf.get(card) ?? 0);
+    // 淡出的時候不用畫（還沒對齊、整張都用 WebGL 畫的卡片除外）
+    if (scene) {
+      for (const [card, pane] of panes) {
+        if (!scrolling || pane.opaque) pane.draw(scene, blurOf.get(card) ?? 0, radiusOf.get(card) ?? 0);
+      }
+    }
     // 背景一秒會動 3 次、捲動和進場動畫也會移動卡片：每一幀看一下，沒變就不畫
     raf = requestAnimationFrame(frame);
   };

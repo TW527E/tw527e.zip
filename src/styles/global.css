@@ -278,6 +278,13 @@ ul {
   inset: 0;
   width: 100%;
   height: 100%;
+  transition: opacity 0.3s var(--ease);
+}
+
+/* 手機捲動的時候邊緣那層先淡出（scripts/liquid-gl.ts） */
+.is-scrolling .refract-mirror:not([data-opaque]) > .refract-mirror__gl {
+  opacity: 0;
+  transition-duration: 0.12s;
 }
 
 /* 霧面那層要固定在畫面上（position: fixed），所以這層不能有 transform；形狀用 clip-path 裁 */
