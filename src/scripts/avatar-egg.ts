@@ -1,10 +1,32 @@
 // 彩蛋：連點頭像三下，頭像會轉一圈、噴出一小把彩色碎片，再冒出一句話。
 // 要求減少動態效果時只冒那句話。
+// 碎片和那句話都放在卡片裡、對著頭像擺，捲動時會跟著頭像走。
+
+import { site } from "../config/site";
 
 /** 兩下之間最多隔多久（ms）還算連點 */
 const GAP = 500;
 const BITS = 16;
-const LINES = ["被你發現了！", "再點我要暈了啦 @_@", "嘿嘿，這是隱藏彩蛋", "今天也辛苦了～"];
+/** 那句話離頭像多遠（px），留空間給轉圈時放大的頭像 */
+const BUBBLE_GAP = 18;
+/** 那句話離畫面邊緣至少多遠（px），上面放不下就改放頭像下面 */
+const EDGE = 8;
+/** 隨機挑一句，不會連續兩次一樣。想加就直接加，一句最好不超過 18 個字（手機才放得下） */
+const LINES = [
+  "被你發現了！",
+  "欸，你怎麼找到這裡的",
+  "好啦好啦，被你抓到了",
+  "再點下去我要暈了 @_@",
+  "今天也辛苦了～",
+  "要不要來 osu! 打一把？",
+  "要不要來 Discord 聊個天？",
+  `這個主頁其實 ${site.since.slice(0, 4)} 年就開張了`,
+  "你有注意到我的網站是 .zip 結尾嗎？",
+  "熱知識：我在 Linux 上玩 VRChat",
+  "VRChat 上全追就是為了讓別人知道我躺著（",
+  "你還不來 Lunlun's World 玩！",
+  "Mac 上我也要按 Shift 切輸入法",
+];
 
 export function initAvatarEgg() {
   const avatar = document.querySelector<HTMLElement>(".avatar");
@@ -13,16 +35,22 @@ export function initAvatarEgg() {
 
   let count = 0;
   let last = 0;
-  let line = 0;
+  let line = -1;
   let bubble: HTMLElement | null = null;
   let bubbleTimer = 0;
 
-  const burst = (cx: number, cy: number) => {
+  /** 放碎片和那句話的地方：頭像所在的卡片（position: relative） */
+  const host = () => (avatar.offsetParent as HTMLElement | null) ?? document.body;
+  /** 頭像中心在卡片裡的位置 */
+  const center = () => ({ x: avatar.offsetLeft + avatar.offsetWidth / 2, y: avatar.offsetTop + avatar.offsetHeight / 2 });
+
+  const burst = () => {
+    const { x, y } = center();
     const box = document.createElement("div");
     box.className = "egg-burst";
     box.setAttribute("aria-hidden", "true");
-    box.style.left = `${cx}px`;
-    box.style.top = `${cy}px`;
+    box.style.left = `${x}px`;
+    box.style.top = `${y}px`;
     for (let i = 0; i < BITS; i++) {
       const bit = document.createElement("span");
       // 四種顏色、一半圓點一半星星
@@ -34,21 +62,29 @@ export function initAvatarEgg() {
       bit.style.setProperty("--spin", `${Math.round(Math.random() * 360 - 180)}deg`);
       box.append(bit);
     }
-    document.body.append(box);
+    host().append(box);
     window.setTimeout(() => box.remove(), 1200);
   };
 
-  const say = (rect: DOMRect) => {
+  const say = () => {
     bubble?.remove();
     clearTimeout(bubbleTimer);
+    let next = Math.floor(Math.random() * (LINES.length - 1));
+    if (next >= line) next++;
+    line = next;
     bubble = document.createElement("p");
     bubble.className = "egg-bubble";
     bubble.setAttribute("role", "status");
-    bubble.textContent = LINES[line++ % LINES.length];
-    bubble.style.left = `${rect.left + rect.width / 2}px`;
-    // 留空間給轉圈時放大的頭像
-    bubble.style.top = `${rect.top - 18}px`;
-    document.body.append(bubble);
+    bubble.textContent = LINES[line];
+    const { x } = center();
+    bubble.style.left = `${x}px`;
+    bubble.style.top = `${avatar.offsetTop - BUBBLE_GAP}px`;
+    host().append(bubble);
+    // 頭像上面放不下（捲下去了、或貼著畫面頂端）：改放頭像下面
+    if (bubble.getBoundingClientRect().top < EDGE) {
+      bubble.classList.add("is-below");
+      bubble.style.top = `${avatar.offsetTop + avatar.offsetHeight + BUBBLE_GAP}px`;
+    }
     const current = bubble;
     bubbleTimer = window.setTimeout(() => {
       current.classList.add("is-leaving");
@@ -57,14 +93,13 @@ export function initAvatarEgg() {
   };
 
   const party = () => {
-    const rect = avatar.getBoundingClientRect();
-    say(rect);
+    say();
     if (reduce.matches) return;
     // 先拿掉再加回去，連續觸發也會重新轉
     avatar.classList.remove("is-party");
     void avatar.offsetWidth;
     avatar.classList.add("is-party");
-    burst(rect.left + rect.width / 2, rect.top + rect.height / 2);
+    burst();
   };
 
   avatar.addEventListener("animationend", () => avatar.classList.remove("is-party"));

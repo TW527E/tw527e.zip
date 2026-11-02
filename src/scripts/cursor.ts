@@ -71,9 +71,23 @@ export function initCursor() {
     };
   };
 
+  /** 沒吸附、形狀也變回來了：位置直接跟著滑鼠，不要慢慢追（慢慢追會覺得游標有延遲，Safari 特別明顯） */
+  const following = () => !target && Math.abs(cur.w - (beam ? BEAM : DOT)) < 0.5 && Math.abs(cur.h - (beam ? beam.h : DOT)) < 0.5;
+  const place = () => {
+    // 縮放要放在位移後面，才會以游標自己為中心縮小，不會被拉往畫面左上角
+    ring.style.transform = `translate3d(${cur.x - cur.w / 2}px, ${cur.y - cur.h / 2}px, 0) scale(${cur.s})`;
+  };
+
+  /** 停下來之後畫過最後一次了沒 */
+  let drawn = false;
   const tick = () => {
     const g = goal();
     let moving = false;
+    if (following()) {
+      cur.x = g.x;
+      // 文字游標換行的時候還是滑過去
+      if (!beam) cur.y = g.y;
+    }
     for (const k of ["x", "y", "w", "h", "r", "s"] as const) {
       const d = g[k] - cur[k];
       if (Math.abs(d) > (k === "s" ? 0.001 : 0.1)) {
@@ -83,11 +97,15 @@ export function initCursor() {
         cur[k] = g[k];
       }
     }
-    ring.style.width = `${cur.w}px`;
-    ring.style.height = `${cur.h}px`;
-    ring.style.borderRadius = `${cur.r}px`;
-    // 縮放要放在位移後面，才會以游標自己為中心縮小，不會被拉往畫面左上角
-    ring.style.transform = `translate3d(${cur.x - cur.w / 2}px, ${cur.y - cur.h / 2}px, 0) scale(${cur.s})`;
+    // 吸附時每一幀都會跑到這裡，但大部分時候沒變；沒變就不要寫，不然每一幀都要重畫
+    if (moving || !drawn) {
+      // 停下來的那一幀還要再畫一次：上面把最後一點距離直接補到位了
+      drawn = !moving;
+      ring.style.width = `${cur.w}px`;
+      ring.style.height = `${cur.h}px`;
+      ring.style.borderRadius = `${cur.r}px`;
+      place();
+    }
     // 吸附中的按鈕本身也可能在動（hover 彈跳），所以吸附時持續更新
     raf = moving || target ? requestAnimationFrame(tick) : 0;
   };
@@ -127,6 +145,8 @@ export function initCursor() {
   };
 
   let hovered: HTMLElement | null = null;
+  /** 每個東西的圓角查一次就記住：吸附那一瞬間少做一點事 */
+  const radii = new WeakMap<HTMLElement, number>();
   const pick = (el: Element | null) => {
     const hit = el?.closest<HTMLElement>(INTERACTIVE) ?? null;
     // 沒吸附在東西上時，每次移動都要看看底下是不是文字
@@ -143,7 +163,12 @@ export function initCursor() {
     target = hit;
     pad = wide ? PAD_WIDE : PAD;
     // 文字連結沒有圓角，給一點圓角比較像 iPad
-    radius = Math.max(parseFloat(getComputedStyle(hit).borderTopLeftRadius) || 0, 8);
+    let r = radii.get(hit);
+    if (r === undefined) {
+      r = Math.max(parseFloat(getComputedStyle(hit).borderTopLeftRadius) || 0, 8);
+      radii.set(hit, r);
+    }
+    radius = r;
     ring.classList.add("is-snapped");
     ring.classList.toggle("is-wide", wide);
   };
@@ -161,18 +186,29 @@ export function initCursor() {
       px = e.clientX;
       py = e.clientY;
       pick(e.target instanceof Element ? e.target : null);
+      // 跟著滑鼠的時候馬上移過去，不等下一幀：Safari 的滑鼠事件常常在這一幀畫完之後才來
+      if (following()) {
+        cur.x = px;
+        if (!beam) cur.y = py;
+        place();
+      }
       kick();
     },
     { passive: true },
   );
-  window.addEventListener(
-    "scroll",
-    () => {
+  // 捲動事件一幀可能來好幾次，找滑鼠底下是什麼一幀做一次就好
+  let scrollPick = 0;
+  const repick = () => {
+    if (scrollPick) return;
+    scrollPick = requestAnimationFrame(() => {
+      scrollPick = 0;
       pick(document.elementFromPoint(px, py));
       kick();
-    },
-    { passive: true },
-  );
+    });
+  };
+  window.addEventListener("scroll", repick, { passive: true });
+  // 拉過頭尾的回彈也會移動頁面
+  window.addEventListener("page:shift", repick);
   document.documentElement.addEventListener("pointerleave", () => ring.classList.remove("is-visible"));
   const press = (on: boolean) => {
     down = on;

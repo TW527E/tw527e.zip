@@ -1,5 +1,6 @@
 ---
 import { site } from "../config/site";
+import Icon from "./Icon.astro";
 
 const startYear = Number(site.since.slice(0, 4));
 const year = new Date().getFullYear();
@@ -14,12 +15,18 @@ const years = year > startYear ? `${startYear}–${year}` : `${startYear}`;
     <span aria-hidden="true">·</span>
     <span data-cursor>v{__APP_VERSION__}</span>
   </p>
+  <!-- 跑不動會自動換成輕量模式（scripts/perf.ts），被誤判或想省電時可以自己切換 -->
+  <button class="footer__lite glass glass--clear" type="button" data-lite-toggle aria-label="輕量模式" aria-pressed="false" title="輕量模式：關">
+    <Icon name="Feather" />
+  </button>
 </footer>
 
 <style>
   .footer {
     display: flex;
     justify-content: center;
+    align-items: center;
+    gap: 8px;
     margin-top: auto;
   }
 
@@ -37,6 +44,36 @@ const years = year > startYear ? `${startYear}–${year}` : `${startYear}`;
   .footer__pill a {
     text-decoration: underline;
     text-underline-offset: 3px;
+  }
+
+  /* 跟版權那顆膠囊一樣高的圓形按鈕；開著的時候用強調色 */
+  .footer__lite {
+    display: grid;
+    flex: none;
+    place-items: center;
+    width: 38px;
+    height: 38px;
+    padding: 0;
+    border: 0;
+    border-radius: 999px;
+    color: inherit;
+    transition:
+      transform 0.45s var(--spring),
+      color 0.2s var(--ease);
+  }
+
+  .footer__lite :global(svg) {
+    width: 17px;
+    height: 17px;
+  }
+
+  .footer__lite[aria-pressed="true"] {
+    color: var(--accent);
+  }
+
+  .footer__lite:active {
+    transform: scale(0.86);
+    transition-duration: 0.1s;
   }
 
   @media (max-width: 959px) {

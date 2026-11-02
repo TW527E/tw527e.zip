@@ -2,6 +2,9 @@
 // 瀏覽器的 backdrop-filter 只肯讀同網域的圖片檔（data: / blob: 都不行），
 // 所以不能在前端即時畫，改成先做好碎片，再由 src/scripts/liquid.ts 依卡片尺寸拼起來。
 // R/G 通道 = x/y 位移，128 為不動；越靠近邊緣，往內折射越多。
+// B 通道 = 邊緣高光，128 為沒有高光；面向光源的那一側最亮，對面淡淡的反光。
+// 彎曲的形狀和高光參考 liquidglass.dev（MIT）：把邊緣想成一圈圓弧狀的玻璃，
+// 用折射率算出每個位置光線會偏多少。
 // 用法：node scripts/make-glass-maps.mjs
 import { mkdirSync, writeFileSync } from "node:fs";
 import { deflateSync } from "node:zlib";
@@ -9,9 +12,17 @@ import { deflateSync } from "node:zlib";
 /** 卡片圓角（px），要跟 CSS 裡有 data-refract 的卡片一致 */
 const RADII = [28, 32];
 /** 折射帶寬度（px），要跟 liquid.ts 的 BAND 一致 */
-const BAND = 34;
+const BAND = 48;
 /** 輸出解析度倍數 */
 const SCALE = 2;
+/** 玻璃邊緣的形狀：2 = 圓弧，越大越像方圓（邊緣越陡、往內越快變平） */
+const CURVATURE = 3;
+/** 折射率：玻璃大約 1.5 */
+const IOR = 1.5;
+/** 高光強度（0–1）、最亮那條線的寬度（px）、光源方向（度，0 = 從右邊、-90 = 從上面） */
+const SPECULAR = 0.7;
+const SPECULAR_WIDTH = 1.5;
+const LIGHT_ANGLE = -120;
 const OUT = "public/glass";
 
 // 圓角矩形的有號距離（內部為負，單位 px）與外法線
@@ -33,6 +44,39 @@ function sdf(x, y, hw, hh, r) {
     ny = 1;
   }
   return { d: outside + inside - r, nx: nx * Math.sign(x || 1), ny: ny * Math.sign(y || 1) };
+}
+
+// 邊緣往內 s（0 = 最外圈、1 = 折射帶內側）的位置，光線偏多少（0–1，最外圈最大）。
+// 玻璃表面高度 h(s) = (1 - (1 - s)^k)^(1/k)；垂直射入、表面傾斜 θ 的光線，折射後偏移跟 tan(θ - 折射角) 成正比。
+const PROFILE = (() => {
+  const N = 512;
+  const table = new Float64Array(N + 1);
+  let max = 0;
+  for (let i = 0; i <= N; i++) {
+    const t = Math.min(i / N, 1 - 1e-6);
+    const a = (1 - t) ** CURVATURE;
+    const slope = (1 - t) ** (CURVATURE - 1) * Math.max(1 - a, 1e-9) ** (1 / CURVATURE - 1);
+    const theta = Math.atan(slope);
+    const bend = Math.tan(theta - Math.asin(Math.sin(theta) / IOR));
+    table[i] = bend;
+    max = Math.max(max, bend);
+  }
+  for (let i = 0; i <= N; i++) table[i] /= max;
+  table[N] = 0;
+  return (t) => table[Math.round(Math.min(Math.max(t, 0), 1) * N)];
+})();
+
+const LIGHT_X = Math.cos((LIGHT_ANGLE * Math.PI) / 180);
+const LIGHT_Y = Math.sin((LIGHT_ANGLE * Math.PI) / 180);
+
+/** 邊緣往內 inset px、外法線 (nx, ny) 的位置的高光（B 通道） */
+function rimLight(inset, nx, ny) {
+  const crisp = Math.max(0, 1 - inset / SPECULAR_WIDTH);
+  const glow = Math.max(0, 1 - inset / (SPECULAR_WIDTH * 5));
+  const rim = SPECULAR * (crisp * crisp + 0.3 * glow * glow);
+  const facing = nx * LIGHT_X + ny * LIGHT_Y;
+  const shade = 0.12 + 0.88 * (facing > 0 ? facing : -0.4 * facing);
+  return 128 + Math.round(127 * Math.min(1, rim * shade));
 }
 
 const crcTable = Array.from({ length: 256 }, (_, n) => {
@@ -65,12 +109,12 @@ function render(file, x0, y0, w, h, card, r) {
       const x = x0 + (px + 0.5) / SCALE - card / 2;
       const y = y0 + (py + 0.5) / SCALE - card / 2;
       const { d, nx, ny } = sdf(x, y, card / 2, card / 2, r);
-      const t = Math.min(Math.max(-d / BAND, 0), 1); // 0 = 邊緣, 1 = 折射帶內側
-      const k = d > 0 ? 1 : (1 - t) ** 1.6; // 越靠邊越強
+      const inset = Math.max(-d, 0);
+      const k = PROFILE(inset / BAND); // 越靠邊越強
       const i = row + 1 + px * 3;
       raw[i] = Math.round(128 - nx * k * 127);
       raw[i + 1] = Math.round(128 - ny * k * 127);
-      raw[i + 2] = 128;
+      raw[i + 2] = d > 0 ? 128 : rimLight(inset, nx, ny);
     }
   }
   const ihdr = Buffer.alloc(13);

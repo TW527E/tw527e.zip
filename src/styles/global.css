@@ -4,17 +4,20 @@
   font-display: swap;
 }
 
-/* 滑鼠光源位置（JS 會更新；沒動滑鼠時由動畫帶著飄） */
+/*
+ * 光源在卡片裡的位置（scripts/pointer-light.ts 寫在每張 .glass 上）。
+ * 不往下繼承：改了只有卡片自己要重算樣式，裡面的東西不用跟著重算。
+ */
 @property --mx {
-  syntax: "<length>";
-  inherits: true;
-  initial-value: 30vw;
+  syntax: "<length-percentage>";
+  inherits: false;
+  initial-value: 30%;
 }
 
 @property --my {
-  syntax: "<length>";
-  inherits: true;
-  initial-value: 12vh;
+  syntax: "<length-percentage>";
+  inherits: false;
+  initial-value: 12%;
 }
 
 :root {
@@ -28,6 +31,7 @@
   --danmaku-text: #14161c;
   --accent-soft: rgb(156 63 20 / 0.12);
   --focus: #9c3f14;
+  --selection: rgb(20 22 28 / 0.14);
   --page: #dfe7f2;
   --scrim: rgb(255 255 255 / 0.06);
   --glass: rgb(255 255 255 / 0.38);
@@ -46,8 +50,6 @@
   --font-script: "Pacifico", var(--font-sans);
   --spring: cubic-bezier(0.34, 1.56, 0.64, 1);
   --ease: cubic-bezier(0.2, 0.8, 0.2, 1);
-  --mx: 30vw;
-  --my: 12vh;
 }
 
 @media (prefers-color-scheme: dark) {
@@ -64,6 +66,7 @@
     --danmaku-text: #f5f2ee;
     --accent-soft: rgb(255 178 125 / 0.16);
     --focus: #ffb27d;
+    --selection: rgb(255 255 255 / 0.22);
     --page: #11131b;
     --scrim: rgb(5 6 12 / 0.3);
     --glass: rgb(18 18 26 / 0.4);
@@ -90,6 +93,7 @@
   --danger: #ff8a9a;
   --accent-soft: rgb(255 178 125 / 0.16);
   --focus: #ffb27d;
+  --selection: rgb(255 255 255 / 0.22);
   --page: #11131b;
   --scrim: rgb(5 6 12 / 0.3);
   --glass: rgb(18 18 26 / 0.4);
@@ -115,34 +119,14 @@
 html {
   -webkit-text-size-adjust: 100%;
   text-size-adjust: 100%;
-}
-
-html.light-idle {
-  animation: light-drift 18s ease-in-out infinite alternate;
-}
-
-@keyframes light-drift {
-  0% {
-    --mx: 18vw;
-    --my: 6vh;
-  }
-  35% {
-    --mx: 72vw;
-    --my: 22vh;
-  }
-  70% {
-    --mx: 48vw;
-    --my: 64vh;
-  }
-  100% {
-    --mx: 12vw;
-    --my: 80vh;
-  }
+  /* 瀏覽器原生的回彈關掉，改用 scripts/overscroll.ts 自己做：原生的回彈玻璃和游標會對不上 */
+  overscroll-behavior-y: none;
 }
 
 body {
   margin: 0;
   min-height: 100dvh;
+  overscroll-behavior-y: none;
   background: var(--page);
   color: var(--text);
   font-family: var(--font-sans);
@@ -176,6 +160,12 @@ ul {
 :focus-visible {
   outline: 2px solid var(--focus);
   outline-offset: 3px;
+}
+
+/* 選取文字：不用瀏覽器預設的藍色，改成淺灰色，字的顏色不變 */
+::selection {
+  background: var(--selection);
+  color: inherit;
 }
 
 .visually-hidden {
@@ -227,6 +217,13 @@ ul {
   background-color: var(--glass-clear);
 }
 
+/* 高光畫在 ::before / ::after 上，光源位置要從卡片拿 */
+.glass::before,
+.glass::after {
+  --mx: inherit;
+  --my: inherit;
+}
+
 /* 邊緣高光：跟著光源跑的亮邊 + 上亮下暗的描邊 */
 .glass::before {
   content: "";
@@ -237,7 +234,7 @@ ul {
   padding: 1.5px;
   pointer-events: none;
   background:
-    radial-gradient(260px circle at var(--mx) var(--my), var(--rim), transparent 70%) fixed,
+    radial-gradient(260px circle at var(--mx) var(--my), var(--rim), transparent 70%),
     linear-gradient(160deg, var(--edge), var(--edge-dim) 38%, var(--edge-dim) 62%, var(--edge));
   -webkit-mask:
     linear-gradient(#000 0 0) content-box,
@@ -256,12 +253,12 @@ ul {
   z-index: -1;
   border-radius: inherit;
   pointer-events: none;
-  background: radial-gradient(520px circle at var(--mx) var(--my), var(--sheen), transparent 65%) fixed;
+  background: radial-gradient(520px circle at var(--mx) var(--my), var(--sheen), transparent 65%);
 }
 
 /* 邊緣折射（scripts/liquid.ts 依卡片尺寸產生濾鏡，產生好才會加上 data-refract-ready） */
 
-/* Chromium：backdrop-filter 直接引用 SVG 濾鏡 */
+/* 沒有 WebGL 時的備案。Chromium：backdrop-filter 直接引用 SVG 濾鏡 */
 .liquid--backdrop .glass[data-refract-ready] {
   -webkit-backdrop-filter: var(--refract) blur(var(--blur)) saturate(180%);
   backdrop-filter: var(--refract) blur(var(--blur)) saturate(180%);
@@ -271,6 +268,69 @@ ul {
 .liquid--mirror .glass[data-refract-ready] {
   -webkit-backdrop-filter: none;
   backdrop-filter: none;
+}
+
+/* WebGL 版（scripts/liquid-gl.ts）：霧面和邊緣折射都畫在卡片裡，卡片本身不用 backdrop-filter */
+.liquid--gl .glass[data-refract-ready] {
+  -webkit-backdrop-filter: none;
+  backdrop-filter: none;
+}
+
+.refract-mirror__gl {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  transition: opacity 0.3s var(--ease);
+}
+
+/* 手機捲動的時候邊緣那層先淡出（scripts/liquid-gl.ts） */
+.is-scrolling .refract-mirror:not([data-opaque]) > .refract-mirror__gl {
+  opacity: 0;
+  transition-duration: 0.12s;
+}
+
+/* 霧面那層要固定在畫面上（position: fixed），所以這層不能有 transform；形狀用 clip-path 裁 */
+.liquid--gl .refract-mirror {
+  will-change: auto;
+}
+
+/* 事先模糊好的背景，位置、大小、漂移都跟 .bg 一樣（components/Background.astro） */
+.refract-frost {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 100vh;
+  height: 100lvh;
+  overflow: hidden;
+}
+
+.refract-frost__img {
+  position: absolute;
+  inset: -4%;
+  width: 108%;
+  height: 108%;
+  object-fit: cover;
+  opacity: 0;
+  transition: opacity 0.8s var(--ease);
+  animation: bg-drift 50s steps(150) infinite alternate;
+  will-change: transform;
+}
+
+.refract-frost__img.is-loaded {
+  opacity: 1;
+}
+
+.refract-frost__scrim {
+  position: absolute;
+  inset: 0;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .refract-frost__img {
+    animation: none;
+  }
 }
 
 .refract-mirror {
@@ -283,6 +343,8 @@ ul {
   pointer-events: none;
   /* 卡片的底色會被副本蓋住，所以在副本上面再疊一次 */
   background-color: inherit;
+  /* 自己一層：卡片上的字、按鈕、游標重畫時，Safari 才不用跟著重跑折射濾鏡 */
+  will-change: transform;
 }
 
 .refract-mirror::after {
@@ -296,13 +358,28 @@ ul {
   display: block;
 }
 
-/* 比卡片大一圈，模糊的邊緣會落在被裁掉的地方。折射在 SVG 裡做，這裡只負責模糊和飽和度 */
+/* 輕量模式（scripts/perf.ts）：跑不動的裝置不做折射，只留一般的毛玻璃。
+   底下先換回毛玻璃，副本再慢慢淡出，才不會閃一下 */
+.lite.liquid .glass[data-refract-ready] {
+  -webkit-backdrop-filter: blur(var(--blur)) saturate(180%);
+  backdrop-filter: blur(var(--blur)) saturate(180%);
+}
+
+.lite .glass > .refract-mirror {
+  opacity: 0;
+  visibility: hidden;
+  transition:
+    opacity 0.6s var(--ease),
+    visibility 0s 0.6s;
+}
+
+/* 比卡片大一圈，模糊的邊緣會落在被裁掉的地方。模糊和折射在 SVG 濾鏡裡做，這裡只負責飽和度 */
 .refract-mirror__box {
   position: absolute;
   top: -40px;
   left: -40px;
   overflow: hidden;
-  filter: blur(var(--blur)) saturate(180%);
+  filter: saturate(180%);
 }
 
 .refract-mirror__page {
@@ -315,7 +392,8 @@ ul {
   /* 百分比以圖片自己的大小、中心點算，跟 .bg__img 一樣 */
   transform-box: fill-box;
   transform-origin: center;
-  animation: bg-drift 50s ease-in-out infinite alternate;
+  /* 跟 .bg__img 一樣一秒只動 3 次（見 components/Background.astro） */
+  animation: bg-drift 50s steps(150) infinite alternate;
 }
 
 /* 跟真正的背景一起淡入 */
@@ -463,10 +541,6 @@ button.tile:active {
 }
 
 @media (prefers-reduced-motion: reduce) {
-  html.light-idle {
-    animation: none;
-  }
-
   *,
   *::before,
   *::after {
@@ -481,7 +555,8 @@ button.tile:active {
 @media (prefers-reduced-transparency: reduce) {
   .glass,
   .glass--clear,
-  .liquid .glass[data-refract-ready] {
+  .liquid .glass[data-refract-ready],
+  .lite.liquid .glass[data-refract-ready] {
     background-color: var(--glass-solid);
     -webkit-backdrop-filter: none;
     backdrop-filter: none;
@@ -528,6 +603,8 @@ button.tile:active {
 
 /* 尺寸、圓角、位置都由 JS 每一幀更新，這裡只管外觀 */
 .cursor-ring {
+  /* 跟下面的模糊用同一組濾鏡、但都不起作用，切換時才不用重建 */
+  --pointer-no-blur: blur(0) saturate(100%) brightness(1);
   position: fixed;
   top: 0;
   left: 0;
@@ -544,33 +621,55 @@ button.tile:active {
   backdrop-filter: blur(3px) saturate(160%) brightness(1.05);
   opacity: 0;
   pointer-events: none;
+  /* 一直待在自己的一層：游標移動、變形時不用重畫底下的卡片（Safari 重畫卡片要重跑折射濾鏡） */
+  will-change: transform;
   transition:
     opacity 0.25s var(--ease),
     background-color 0.25s var(--ease),
     box-shadow 0.25s var(--ease);
 }
 
+/* 吸附之後的玻璃反光：上半部一層淡淡的光（畫上去的，不即時算底下的畫面） */
+.cursor-ring::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  background: linear-gradient(180deg, rgb(255 255 255 / 0.2), rgb(255 255 255 / 0) 48%);
+  opacity: 0;
+  transition: opacity 0.25s var(--ease);
+}
+
 .cursor-ring.is-visible {
   opacity: 1;
 }
 
-/* 吸附在按鈕上：變成按鈕形狀、浮在上面的一層高光；不模糊，免得按鈕上的字糊掉 */
+/* 吸附在按鈕上：變成按鈕形狀、浮在上面的一層玻璃。
+   高光和彩色的邊（像玻璃邊緣的色散）都是畫上去的；不模糊，免得按鈕上的字糊掉 */
 .cursor-ring.is-snapped {
   background: var(--pointer-snap);
   box-shadow:
     inset 0 1px 0 var(--pointer-snap-edge),
+    inset 0 -1px 1px rgb(0 0 0 / 0.06),
+    inset 1px 0 0 rgb(255 120 160 / 0.18),
+    inset -1px 0 0 rgb(110 170 255 / 0.18),
     inset 0 0 0 1px var(--pointer-edge),
     0 6px 18px rgb(0 0 0 / 0.14);
-  -webkit-backdrop-filter: none;
-  backdrop-filter: none;
+  /* 不模糊，但不寫 none：在有和沒有濾鏡之間切換，Safari 每次都要重建這一層，快速移動時會卡 */
+  -webkit-backdrop-filter: var(--pointer-no-blur);
+  backdrop-filter: var(--pointer-no-blur);
+}
+
+.cursor-ring.is-snapped::after {
+  opacity: 1;
 }
 
 /* 在文字上：變成一條跟那一行一樣高的直線 */
 .cursor-ring.is-text {
   background: var(--pointer-beam);
   box-shadow: none;
-  -webkit-backdrop-filter: none;
-  backdrop-filter: none;
+  -webkit-backdrop-filter: var(--pointer-no-blur);
+  backdrop-filter: var(--pointer-no-blur);
 }
 
 /* 大卡片：整張卡片亮一層，淡一點，不要蓋過卡片上的字 */
@@ -579,6 +678,10 @@ button.tile:active {
   box-shadow:
     inset 0 1px 0 var(--pointer-snap-edge),
     inset 0 0 0 1px var(--pointer-edge);
+}
+
+.cursor-ring.is-snapped.is-wide::after {
+  opacity: 0.5;
 }
 
 .refract-defs {
@@ -612,8 +715,9 @@ button.tile:active {
   }
 }
 
+/* 碎片和那句話都放在頭像所在的卡片裡（scripts/avatar-egg.ts），捲動時跟著頭像 */
 .egg-burst {
-  position: fixed;
+  position: absolute;
   z-index: 60;
   width: 0;
   height: 0;
@@ -672,7 +776,9 @@ button.tile:active {
 }
 
 .egg-bubble {
-  position: fixed;
+  /* 平常在頭像上面，放不下就到下面（.is-below） */
+  --y: -100%;
+  position: absolute;
   z-index: 61;
   margin: 0;
   padding: 8px 14px;
@@ -686,8 +792,12 @@ button.tile:active {
   font-weight: 700;
   white-space: nowrap;
   pointer-events: none;
-  transform: translate(-50%, -100%);
+  transform: translate(-50%, var(--y));
   animation: egg-bubble-in 0.4s var(--spring);
+}
+
+.egg-bubble.is-below {
+  --y: 0%;
 }
 
 /* 指向頭像的小尖角 */
@@ -703,20 +813,26 @@ button.tile:active {
   transform: translateX(-50%);
 }
 
+.egg-bubble.is-below::after {
+  top: auto;
+  bottom: 100%;
+  clip-path: polygon(50% 0, 100% 100%, 0 100%);
+}
+
 .egg-bubble.is-leaving {
   animation: egg-bubble-out 0.25s var(--ease) forwards;
 }
 
 @keyframes egg-bubble-in {
   from {
-    transform: translate(-50%, -80%) scale(0.6);
+    transform: translate(-50%, var(--y)) scale(0.6);
     opacity: 0;
   }
 }
 
 @keyframes egg-bubble-out {
   to {
-    transform: translate(-50%, -110%);
+    transform: translate(-50%, calc(var(--y) - 10%));
     opacity: 0;
   }
 }
