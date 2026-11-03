@@ -14,4 +14,6 @@ export const site = {
   since: "2022-04-30",
   repo: "https://github.com/TW527E/tw527e.zip",
   coffee: "https://buymeacoffee.com/TW527E",
+  /** 萌國 ICP 備案號 */
+  moeIcp: "20220487",
 } as const;
