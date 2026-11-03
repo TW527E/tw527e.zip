@@ -14,14 +14,18 @@ const years = year > startYear ? `${startYear}–${year}` : `${startYear}`;
     <a href={site.repo} target="_blank" rel="noopener noreferrer">原始碼</a>
     <span aria-hidden="true">·</span>
     <span data-cursor>v{__APP_VERSION__}</span>
+    <span class="footer__icp-sep" aria-hidden="true">·</span>
+    <a class="footer__icp" href={`https://icp.gov.moe/?keyword=${site.moeIcp}`} target="_blank" rel="noopener noreferrer">萌ICP备{site.moeIcp}号</a>
   </p>
-  <a class="footer__round glass glass--clear" href={site.coffee} target="_blank" rel="noopener noreferrer" aria-label="請我喝杯咖啡" title="請我喝杯咖啡">
-    <Icon name="Coffee" />
-  </a>
-  <!-- 跑不動會自動換成輕量模式（scripts/perf.ts），被誤判或想省電時可以自己切換 -->
-  <button class="footer__round glass glass--clear" type="button" data-lite-toggle aria-label="輕量模式" aria-pressed="false" title="輕量模式：關">
-    <Icon name="Feather" />
-  </button>
+  <div class="footer__btns">
+    <a class="footer__round glass glass--clear" href={site.coffee} target="_blank" rel="noopener noreferrer" aria-label="請我喝杯咖啡" title="請我喝杯咖啡">
+      <Icon name="Coffee" />
+    </a>
+    <!-- 跑不動會自動換成輕量模式（scripts/perf.ts），被誤判或想省電時可以自己切換 -->
+    <button class="footer__round glass glass--clear" type="button" data-lite-toggle aria-label="輕量模式" aria-pressed="false" title="輕量模式：關">
+      <Icon name="Feather" />
+    </button>
+  </div>
 </footer>
 
 <style>
@@ -37,7 +41,9 @@ const years = year > startYear ? `${startYear}–${year}` : `${startYear}`;
     display: flex;
     flex-wrap: wrap;
     justify-content: center;
+    align-content: center;
     gap: 8px;
+    min-height: 38px; /* 跟圓鈕一樣高 */
     margin: 0;
     padding: 8px 18px;
     border-radius: 999px;
@@ -47,6 +53,11 @@ const years = year > startYear ? `${startYear}–${year}` : `${startYear}`;
   .footer__pill a {
     text-decoration: underline;
     text-underline-offset: 3px;
+  }
+
+  .footer__btns {
+    display: flex;
+    gap: inherit;
   }
 
   /* 跟版權那顆膠囊一樣高的圓形按鈕（咖啡、輕量模式）；輕量模式開著的時候用強調色 */
@@ -93,6 +104,27 @@ const years = year > startYear ? `${startYear}–${year}` : `${startYear}`;
 
     .latin {
       display: none;
+    }
+  }
+
+  /* 一行塞不下時：備案號自己一行（前面的點拿掉），圓鈕改上下疊，膠囊拉到跟兩顆圓鈕一樣高
+     ponytail: 斷點是量出來的（一行約要 450px 加左右留白），字型差很多才需要重量 */
+  @media (max-width: 500px) {
+    .footer {
+      align-items: stretch;
+    }
+
+    .footer__btns {
+      flex-direction: column;
+    }
+
+    .footer__icp-sep {
+      display: none;
+    }
+
+    .footer__icp {
+      flex-basis: 100%;
+      text-align: center;
     }
   }
 </style>
