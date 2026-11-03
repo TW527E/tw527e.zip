@@ -50,6 +50,7 @@ export const GET: APIRoute = () => {
     "## Optional",
     "",
     link("這個網站的原始碼", site.repo),
+    link("請我喝杯咖啡", site.coffee),
     "",
   ];
   return new Response(lines.join("\n"), {

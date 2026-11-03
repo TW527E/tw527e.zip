@@ -13,4 +13,5 @@ export const site = {
   /** 網站開張日（YYYY-MM-DD），不想顯示就設成空字串 */
   since: "2022-04-30",
   repo: "https://github.com/TW527E/tw527e.zip",
+  coffee: "https://buymeacoffee.com/TW527E",
 } as const;
