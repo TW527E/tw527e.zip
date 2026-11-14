@@ -39,7 +39,7 @@ pnpm dev:api      # 連留言 API 一起跑（要先 pnpm build），http://loca
 | `guestbook.ts` | 留言板要不要開、Turnstile 的 site key（設定方式在下面「留言板和彈幕」） |
 | `minecraft.ts` | Minecraft 伺服器那張卡片 |
 | `projects.ts` | 「我做的小東西」。Logo 放在 `src/assets/projects/`，沒有 Logo 就挑一個 Lucide 圖示 |
-| `background.ts` | 背景圖清單。以後要改接隨機圖 API，就把 `provider` 改成 `"remote"`，再填 `remote.url` |
+| `background.ts` | 背景圖清單。以後要改接隨機圖 API，就把 `provider` 改成 `"remote"`，再填 `remote.url`（圖片服務要回 `Access-Control-Allow-Origin`，否則會退回本地圖） |
 
 背景圖放在 `public/bg/`。每張都要標 `tone`（`light` 或 `dark`），淺色主題會先挑亮的圖，深色主題先挑暗的。只想在手機版面（959px 以下）或電腦版面出現的圖，加上 `device: "mobile"` 或 `device: "desktop"`，沒加就兩邊都會出現。`weight` 用來調出現的機率：預設是 1，設 2 機會變兩倍，設 0 就不會被隨機挑到。
 

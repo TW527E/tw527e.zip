@@ -110,17 +110,49 @@ export async function listMessages(request: Request, env: Env, ctx: ExecutionCon
   return res;
 }
 
+const MAX_BODY_BYTES = 2048;
+
+/** 讀取請求內容，超過上限就停下來回傳 null */
+async function readLimited(request: Request, limit: number): Promise<string | null> {
+  if (!request.body) return "";
+  const reader = request.body.getReader();
+  const chunks: Uint8Array[] = [];
+  let size = 0;
+  for (;;) {
+    const { done, value } = await reader.read();
+    if (done) break;
+    size += value.byteLength;
+    if (size > limit) {
+      await reader.cancel();
+      return null;
+    }
+    chunks.push(value);
+  }
+  const bytes = new Uint8Array(size);
+  let offset = 0;
+  for (const chunk of chunks) {
+    bytes.set(chunk, offset);
+    offset += chunk.byteLength;
+  }
+  return new TextDecoder().decode(bytes);
+}
+
 export async function postMessage(request: Request, env: Env, ctx: ExecutionContext) {
   if (!env.DB || !env.TURNSTILE_SECRET) return fail("留言板還沒設定好", 503);
 
   // 只收自己網站送來的
   const origin = request.headers.get("Origin");
   if (origin && origin !== new URL(request.url).origin) return fail("只能從這個網站留言", 403);
-  if (Number(request.headers.get("Content-Length") ?? 0) > 2048) return fail("太長了，短一點吧", 413);
+  if (Number(request.headers.get("Content-Length") ?? 0) > MAX_BODY_BYTES) return fail("太長了，短一點吧", 413);
 
+  // Content-Length 可以不送或亂填，所以實際讀到的位元組數也要算
+  const raw = await readLimited(request, MAX_BODY_BYTES);
+  if (raw === null) return fail("太長了，短一點吧", 413);
   let body: { text?: unknown; name?: unknown; token?: unknown };
   try {
-    body = await request.json();
+    const parsed: unknown = JSON.parse(raw);
+    if (typeof parsed !== "object" || parsed === null || Array.isArray(parsed)) return fail("資料格式不對", 400);
+    body = parsed;
   } catch {
     return fail("資料格式不對", 400);
   }
@@ -143,9 +175,18 @@ export async function postMessage(request: Request, env: Env, ctx: ExecutionCont
   if (recent?.last && now - recent.last < COOLDOWN) return fail("留得太快了，等一分鐘再留", 429);
   if ((recent?.count ?? 0) >= DAILY_LIMIT) return fail(`今天已經留滿 ${DAILY_LIMIT} 句了，明天再來吧`, 429);
 
-  const row = await env.DB.prepare("INSERT INTO messages (text, name, created_at, ip_hash) VALUES (?, ?, ?, ?) RETURNING id")
-    .bind(text, name, now, hash)
+  // 上面的檢查只是為了給清楚的訊息；同時送來的請求會看到一樣的舊數字，
+  // 所以寫入時在同一句 SQL 裡再確認一次冷卻時間和每日上限。
+  const row = await env.DB.prepare(
+    `INSERT INTO messages (text, name, created_at, ip_hash)
+     SELECT ?1, ?2, ?3, ?4
+     WHERE (SELECT COUNT(*) FROM messages WHERE ip_hash = ?4 AND created_at > ?5) < ?6
+       AND NOT EXISTS (SELECT 1 FROM messages WHERE ip_hash = ?4 AND created_at > ?7)
+     RETURNING id`,
+  )
+    .bind(text, name, now, hash, now - DAY, DAILY_LIMIT, now - COOLDOWN)
     .first<{ id: number }>();
+  if (!row) return fail("留得太快了，等一下再留", 429);
   // 清掉留言清單的快取，下一個開首頁的人就看得到新留言
   ctx.waitUntil(caches.default.delete(listCacheKey(request)));
   return json({ ok: true, message: { id: row?.id, text, name, created_at: now } }, 201);

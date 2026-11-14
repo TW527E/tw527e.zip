@@ -16,7 +16,8 @@ const BLOCKED = [
 ];
 
 // 網址、網域：彈幕不給放連結
-const LINK = /(https?:\/\/|www\.|[a-z0-9-]+\.(com|net|org|io|xyz|cn|tw|hk|me|cc|top|zip|link|ly|gg|app|dev|site|shop|vip)\b)/i;
+// 不列舉頂級網域：任何「名字.兩個以上字母」都算（example.info、bit.ly…）
+const LINK = /(https?:\/\/|www\.|[a-z0-9-]+\.[a-z]{2,}(?![a-z]))/i;
 
 /** 整理留言：統一字形、拿掉控制字元和零寬字元、把連續空白縮成一個 */
 export function normalize(input: unknown): string {
@@ -30,7 +31,8 @@ export function normalize(input: unknown): string {
 
 /** 連結、髒話、廣告詞的共同檢查 */
 function unfriendly(text: string, what: string): string | null {
-  if (LINK.test(text)) return `${what}裡不能放連結喔`;
+  // 全形英數與全形句點（ｅｘａｍｐｌｅ．ｃｏｍ）先轉成半形再檢查
+  if (LINK.test(text.normalize("NFKC"))) return `${what}裡不能放連結喔`;
   // 比對時才把全形英數轉成半形（ｆｕｃｋ → fuck），存下來的字保持原樣，中文標點才不會被改掉
   const squashed = text.normalize("NFKC").toLowerCase().replace(/[\s\p{P}\p{S}]/gu, "");
   if (BLOCKED.some((word) => squashed.includes(word))) return `這${what === "署名" ? "個署名" : "句話"}有點不友善，換個說法吧`;

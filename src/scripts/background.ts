@@ -9,9 +9,15 @@ const currentDevice = () => (mobileLayout.matches ? "mobile" : "desktop");
 /** 沒指定 device 的圖兩種版面都能用 */
 const fits = (img: BackgroundImage) => !img.device || img.device === currentDevice();
 
+function isCrossOrigin(src: string): boolean {
+  return new URL(src, location.href).origin !== location.origin;
+}
+
 function load(src: string, timeoutMs = 8000): Promise<string> {
   return new Promise((resolve, reject) => {
     const probe = new Image();
+    // 跟實際顯示用同樣的 CORS 模式；遠端沒給 CORS 標頭就在這裡失敗，退回本地圖
+    if (isCrossOrigin(src)) probe.crossOrigin = "anonymous";
     const timer = window.setTimeout(() => {
       probe.src = "";
       reject(new Error("timeout"));
@@ -73,16 +79,24 @@ async function pick(tone: Tone, exclude?: string): Promise<BackgroundImage | nul
   return null;
 }
 
+/** 每次換圖的序號；只有最新的那次可以把圖套上去 */
+let showSeq = 0;
+
 async function show(exclude?: string) {
   const el = document.getElementById("bg-img") as HTMLImageElement | null;
   if (!el) return;
+  const seq = ++showSeq;
   const img = await pick(currentTone(), exclude);
-  if (!img) return;
+  if (!img || seq !== showSeq) return;
   if (current) {
     // 先淡出再換圖，比較不突兀
     el.classList.remove("is-loaded");
     await new Promise((r) => setTimeout(r, 300));
+    if (seq !== showSeq) return;
   }
+  // 別的網域的圖要用 CORS 載入，不然畫進 canvas 後 liquid glass 的 WebGL 會丟 SecurityError
+  if (isCrossOrigin(img.src)) el.crossOrigin = "anonymous";
+  else el.removeAttribute("crossorigin");
   el.src = img.src;
   current = img;
   el.classList.add("is-loaded");
@@ -95,7 +109,8 @@ export function initBackground() {
   document.addEventListener("bg:shuffle", () => void show(current?.src));
   // 換主題後，如果現在這張色調不搭就換一張
   onToneChange((tone) => {
-    if (current && current.tone !== tone) void show(current.src);
+    // 第一張還在載入（current 是 null）時也要重挑，不然會套上舊色調的圖
+    if (!current || current.tone !== tone) void show(current?.src);
   });
   // 視窗縮放跨過手機／電腦版面時，如果現在這張是另一種版面專用的就換一張
   mobileLayout.addEventListener("change", () => {

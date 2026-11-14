@@ -130,7 +130,8 @@ export function initGuestbook() {
       };
       if (!res.ok || !data.ok) throw new Error(data.error ?? "沒送出去，晚點再試");
 
-      input.value = "";
+      // 等待期間改寫的內容不要清掉
+      if (normalize(input.value) === text) input.value = "";
       updateCount();
       try {
         localStorage.setItem(NAME_KEY, name);
